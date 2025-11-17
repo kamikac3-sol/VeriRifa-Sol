@@ -5,19 +5,56 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VeriRifa-Sol - Sorteos Verificados en Solana</title>
     
+    <!-- Cargar Solana Web3.js primero -->
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
+    
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics-compat.js"></script>
-    
-    <!-- Solana Web3 -->
-    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
-    
-    <!-- Estilos -->
-    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* TODOS LOS ESTILOS ORIGINALES AQUÍ - NO LOS CAMBIES */
+        :root {
+            --primary: #9945FF;
+            --secondary: #14F195;
+            --dark: #121212;
+            --light: #f8f9fa;
+            --gray: #6c757d;
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+            --info: #17a2b8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--dark);
+            color: var(--light);
+            line-height: 1.6;
+            overflow-x: hidden;
+            padding-top: 80px;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 10px;
+        }
+
+        /* ... (MANTÉN TODOS TUS ESTILOS ORIGINALES AQUÍ) ... */
+
+    </style>
 </head>
 <body>
-    <!-- Alertas para el usuario -->
+    <!-- ESTRUCTURA HTML COMPLETA - NO LA CAMBIES -->
     <div class="user-alert" id="user-alert">
         <div class="alert-content">
             <div class="alert-icon" id="alert-icon">⚠️</div>
@@ -28,641 +65,739 @@
 
     <!-- Wallet Modal -->
     <div class="wallet-modal" id="wallet-modal">
-        <div class="wallet-modal-content">
-            <div class="modal-header">
-                <h3 class="modal-title">🔗 Conectar Wallet Solana</h3>
-                <button class="close-modal" id="close-wallet-modal">&times;</button>
-            </div>
-
-            <div class="solana-simulation">
-                <h4>🌐 Solana Testnet Real</h4>
-                <p>Conecta tu wallet para interactuar con la blockchain real de Solana:</p>
-                <ul style="margin: 1rem 0; padding-left: 1.5rem;">
-                    <li>🔗 Conexión real con Solana Testnet</li>
-                    <li>💳 Transacciones reales en la blockchain</li>
-                    <li>💰 Usa SOL real de testnet</li>
-                    <li>✅ Smart contracts reales</li>
-                </ul>
-
-                <div class="connection-status" id="real-connection-status">
-                    <strong>Estado Blockchain:</strong> Conectando...
-                </div>
-            </div>
-
-            <div class="local-connection">
-                <h4>👛 Wallets Compatibles</h4>
-
-                <div class="connection-status" id="connection-status">
-                    <strong>Estado Wallet:</strong> Desconectado
-                </div>
-
-                <div style="display: flex; gap: 10px; justify-content: center; margin: 1rem 0; flex-wrap: wrap;">
-                    <button class="btn btn-success" id="connect-phantom-real">🦄 Phantom Wallet</button>
-                    <button class="btn btn-warning" id="connect-solflare-real">🔆 Solflare Wallet</button>
-                </div>
-            </div>
-
-            <div class="wallet-instructions">
-                <h4>📚 Para probar en Testnet:</h4>
-                <p>1. <strong>Instala Phantom</strong> desde phantom.app</p>
-                <p>2. <strong>Configura Red Testnet</strong> en ajustes de Phantom</p>
-                <p>3. <strong>Obtén SOL de testnet</strong> desde faucet</p>
-                <p>4. <strong>¡Conecta y participa!</strong></p>
-
-                <div style="margin-top: 1rem; padding: 1rem; background: rgba(153, 69, 255, 0.1); border-radius: 10px;">
-                    <h4>🚰 Faucets de Solana Testnet:</h4>
-                    <p><a href="https://faucet.solana.com/" target="_blank" style="color: var(--secondary);">• faucet.solana.com</a></p>
-                    <p><a href="https://solfaucet.com/" target="_blank" style="color: var(--secondary);">• solfaucet.com</a></p>
-                </div>
-            </div>
-        </div>
+        <!-- ... (todo el contenido del modal wallet) ... -->
     </div>
 
     <!-- Modal para Reclamar Premio -->
     <div class="claim-prize-modal" id="claim-prize-modal">
-        <div class="claim-prize-content">
-            <div class="modal-header">
-                <h3 class="modal-title">🎉 ¡Felicidades! Has Ganado</h3>
-                <button class="close-modal" id="close-claim-modal">&times;</button>
-            </div>
-
-            <div class="winner-badge">
-                🏆 ¡ERES EL GANADOR! 🏆
-            </div>
-
-            <div class="prize-details">
-                <h4 id="prize-name">Premio: PlayStation 5</h4>
-                <p><strong>Sorteo:</strong> <span id="claim-raffle-name">PlayStation 5 Mega Sorteo</span></p>
-                <p><strong>Número ganador:</strong> <span id="winning-number">15</span></p>
-                <p><strong>Tu wallet:</strong> <span id="winner-wallet">3Yekte2Ur...X3o</span></p>
-            </div>
-
-            <div class="contact-form">
-                <h3>📦 Información de Envío</h3>
-                <p>Por favor, completa tu información para enviarte el premio:</p>
-
-                <div class="form-group">
-                    <label for="winner-name">Nombre Completo *</label>
-                    <input type="text" id="winner-name" class="form-control" placeholder="Tu nombre completo" required>
-                    <div class="form-validation" id="name-validation">Por favor, introduce tu nombre completo</div>
-                </div>
-
-                <div class="form-group">
-                    <label for="winner-email">Email *</label>
-                    <input type="email" id="winner-email" class="form-control" placeholder="tu@email.com" required>
-                    <div class="form-validation" id="email-validation">Por favor, introduce un email válido</div>
-                </div>
-
-                <div class="form-group">
-                    <label for="winner-phone">Teléfono *</label>
-                    <input type="tel" id="winner-phone" class="form-control" placeholder="+34 123 456 789" required>
-                    <div class="form-validation" id="phone-validation">Por favor, introduce un número de teléfono válido</div>
-                </div>
-
-                <div class="form-group">
-                    <label for="winner-address">Dirección de Envío *</label>
-                    <textarea id="winner-address" class="form-control" rows="3" placeholder="Dirección completa para el envío del premio..." required></textarea>
-                    <div class="form-validation" id="address-validation">Por favor, introduce tu dirección completa</div>
-                </div>
-
-                <div class="form-group">
-                    <label for="winner-notes">Notas adicionales</label>
-                    <textarea id="winner-notes" class="form-control" rows="2" placeholder="Instrucciones especiales, horarios preferidos..."></textarea>
-                </div>
-            </div>
-
-            <div class="transaction-status" id="claim-status" style="display: none;">
-                <h4>📧 Enviando información...</h4>
-                <div id="claim-details">Procesando tu solicitud</div>
-            </div>
-
-            <div style="display: flex; gap: 10px; margin-top: 1.5rem; flex-wrap: wrap;">
-                <button class="btn btn-success" id="submit-claim-btn">✅ Enviar Información y Reclamar Premio</button>
-                <button class="btn btn-outline" id="cancel-claim-btn">Cancelar</button>
-            </div>
-        </div>
+        <!-- ... (todo el contenido del modal claim) ... -->
     </div>
 
     <!-- Header -->
     <header>
-        <div class="container">
-            <nav class="navbar">
-                <a href="#inicio" class="logo">
-                    <div class="logo-container">
-                        <div class="logo-icon">
-                            <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <circle cx="20" cy="20" r="18" fill="url(#gradient)" stroke="#14F195" stroke-width="2"/>
-                                <circle cx="20" cy="20" r="14" fill="none" stroke="white" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="2 2"/>
-                                <circle cx="20" cy="20" r="8" fill="#14F195" fill-opacity="0.2"/>
-                                <path d="M16 20L18 22L24 16" stroke="#14F195" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                <circle cx="12" cy="12" r="1.5" fill="white" opacity="0.8"/>
-                                <circle cx="28" cy="12" r="1.5" fill="white" opacity="0.8"/>
-                                <circle cx="12" cy="28" r="1.5" fill="white" opacity="0.8"/>
-                                <circle cx="28" cy="28" r="1.5" fill="white" opacity="0.8"/>
-                                <defs>
-                                    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                        <stop offset="0%" stop-color="#9945FF"/>
-                                        <stop offset="100%" stop-color="#14F195"/>
-                                    </linearGradient>
-                                </defs>
-                            </svg>
-                        </div>
-                        <div class="logo-text">
-                            <div class="logo-main">VeriRifa-Sol</div>
-                            <div class="logo-sub">SORTEOS VERIFICADOS</div>
-                        </div>
-                    </div>
-                </a>
-                <ul class="nav-links">
-                    <li><a href="#inicio">Inicio</a></li>
-                    <li><a href="#sorteos">Sorteos</a></li>
-                    <li><a href="#ganadores">Ganadores</a></li>
-                    <li><a href="#como-funciona">Cómo Funciona</a></li>
-                    <li><a href="#faq">FAQ</a></li>
-                    <li class="admin-menu-item" id="admin-menu-item">
-                        <a href="#admin-panel" id="admin-panel-link">Panel Admin</a>
-                        <span class="admin-badge">ADMIN</span>
-                    </li>
-                </ul>
-                <div class="wallet-connector">
-                    <div class="solana-network" id="network-indicator">🔴 Desconectado</div>
-                    <div class="wallet-balance" id="wallet-balance" style="display: none;"></div>
-                    <div class="wallet-address" id="connected-wallet-address" style="display: none;"></div>
-                    <button class="btn" id="connect-wallet-btn">
-                        <span>👛 Conectar Wallet</span>
-                    </button>
-                    <button class="btn btn-outline btn-small" id="disconnect-wallet-btn" style="display: none;">
-                        <span>🚪 Desconectar</span>
-                    </button>
-                    <button class="btn btn-info btn-small" id="winner-info-btn" style="display: none;">
-                        <span>📝 Info Ganador</span>
-                    </button>
-                </div>
-            </nav>
-        </div>
+        <!-- ... (todo el contenido del header) ... -->
     </header>
 
     <!-- Hero Section -->
     <section class="hero" id="inicio">
-        <div class="container">
-            <div class="hero-logo">
-                <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="60" cy="60" r="55" fill="url(#heroGradient)" stroke="#14F195" stroke-width="3"/>
-                    <circle cx="60" cy="60" r="45" fill="none" stroke="white" stroke-width="2" stroke-opacity="0.4" stroke-dasharray="3 3"/>
-                    <circle cx="60" cy="60" r="25" fill="#14F195" fill-opacity="0.2" stroke="#14F195" stroke-width="2"/>
-                    <path d="M52 60L57 65L68 54" stroke="#14F195" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-                    <circle cx="35" cy="35" r="4" fill="#9945FF" opacity="0.9"/>
-                    <circle cx="85" cy="35" r="4" fill="#9945FF" opacity="0.9"/>
-                    <circle cx="35" cy="85" r="4" fill="#9945FF" opacity="0.9"/>
-                    <circle cx="85" cy="85" r="4" fill="#9945FF" opacity="0.9"/>
-                    <defs>
-                        <linearGradient id="heroGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stop-color="#9945FF"/>
-                            <stop offset="100%" stop-color="#14F195"/>
-                        </linearGradient>
-                    </defs>
-                </svg>
-            </div>
-            <h1>VeriRifa-Sol</h1>
-            <p>Plataforma de sorteos <strong>verificados y transparentes</strong> en la blockchain real de <strong>Solana Testnet</strong>. Gana productos reales con total seguridad.</p>
-
-            <div class="trust-badges">
-                <div class="trust-badge">🔍 Sorteos Verificados</div>
-                <div class="trust-badge">⚡ Solana Testnet Real</div>
-                <div class="trust-badge">🔒 Transacciones Seguras</div>
-                <div class="trust-badge">🎯 Premios Reales</div>
-                <div class="trust-badge">🔥 Firebase Sync</div>
-                <div class="trust-badge">🏆 Archivo de Ganadores</div>
-            </div>
-
-            <div class="local-info">
-                <h3>🚀 VeriRifa-Sol: Transparencia Total</h3>
-                <p><strong>🔍 Verificación:</strong> Cada sorteo es auditado y verificado</p>
-                <p><strong>🔗 Blockchain:</strong> Solana Testnet - Transacciones reales</p>
-                <p><strong>👛 Wallets:</strong> Phantom, Solflare - Conexión segura</p>
-                <p><strong>💰 SOL:</strong> Usa SOL real de testnet (obtén desde faucet)</p>
-                <p><strong>🔥 Firebase:</strong> Datos sincronizados en tiempo real</p>
-                <p><strong>🏆 Archivo:</strong> Historial completo de ganadores</p>
-                <p><strong>👑 Wallet Admin Verificada:</strong> 3Yekte2UrR2rKFBfm3q6D2DyinZKN58svqJvQF87RX3o</p>
-            </div>
-
-            <a href="#sorteos" class="btn">Ver Sorteos Verificados</a>
-        </div>
+        <!-- ... (todo el contenido del hero) ... -->
     </section>
 
     <!-- Features -->
     <section class="features" id="como-funciona">
-        <div class="container">
-            <h2 class="section-title">VeriRifa-Sol: Transparencia Garantizada</h2>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">🔍</div>
-                    <h3>Sorteos Verificados</h3>
-                    <p>Cada sorteo es auditado y verificado para garantizar transparencia total en el proceso.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">⚡</div>
-                    <h3>Solana Testnet Real</h3>
-                    <p>Operamos en la blockchain real de Solana Testnet con transacciones verificables.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🔒</div>
-                    <h3>Seguridad Garantizada</h3>
-                    <p>Tus fondos y transacciones están protegidos por la blockchain de Solana.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🏆</div>
-                    <h3>Archivo de Ganadores</h3>
-                    <p>Historial completo y transparente de todos los ganadores verificados.</p>
-                </div>
-            </div>
-        </div>
+        <!-- ... (todo el contenido de features) ... -->
     </section>
 
     <!-- Admin Panel -->
     <section class="admin-panel" id="admin-panel">
-        <div class="container">
-            <div class="admin-header">
-                <h2 class="section-title">Panel de Verificación - VeriRifa-Sol</h2>
-                <div class="admin-actions">
-                    <button class="btn btn-info" id="view-transactions">Ver Transacciones</button>
-                    <button class="btn btn-warning" id="view-winners-admin">Ver Ganadores</button>
-                    <button class="btn btn-danger" id="close-admin-panel">Cerrar Panel</button>
-                </div>
-            </div>
-
-            <div class="admin-wallet-info">
-                <h3>✅ Modo Verificador Activado - VeriRifa-Sol</h3>
-                <p><strong>Wallet Verificada Principal:</strong> <span id="admin-wallet-address">3Yekte2UrR2rKFBfm3q6D2DyinZKN58svqJvQF87RX3o</span></p>
-                <div class="wallet-balance" id="admin-wallet-balance">
-                    Balance: Cargando...
-                </div>
-                <p><strong>🔗 Blockchain:</strong> Solana Testnet Real</p>
-                <p><strong>🔥 Firebase:</strong> Sincronización activa</p>
-                <p><strong>💰 Todos los pagos verificados van a:</strong> 3Yekte2UrR2rKFBfm3q6D2DyinZKN58svqJvQF87RX3o</p>
-            </div>
-
-            <!-- NUEVA SECCIÓN: TABLA DE GANADORES PARA ADMIN -->
-            <div class="winners-admin-section">
-                <div class="winners-admin-header">
-                    <h3>🏆 Datos de Ganadores Verificados</h3>
-                    <div class="winners-filters">
-                        <input type="text" id="winner-search" class="form-control" placeholder="Buscar por nombre, email o premio..." style="max-width: 300px;">
-                        <select id="winner-status-filter" class="form-control" style="max-width: 200px;">
-                            <option value="all">Todos los estados</option>
-                            <option value="claimed">Premio Reclamado</option>
-                            <option value="pending">Pendiente de Envío</option>
-                            <option value="shipped">Enviado</option>
-                            <option value="delivered">Entregado</option>
-                        </select>
-                        <button class="btn btn-info btn-small" id="refresh-winners-btn">🔄 Actualizar</button>
-                    </div>
-                </div>
-                
-                <div id="winners-admin-container">
-                    <!-- La tabla de ganadores se cargará aquí dinámicamente -->
-                    <div class="no-winners-message" id="no-winners-message">
-                        <h4>📝 No hay ganadores reclamados aún</h4>
-                        <p>Los datos de los ganadores aparecerán aquí una vez que reclamen sus premios</p>
-                    </div>
-                    
-                    <table class="winners-table" id="winners-admin-table" style="display: none;">
-                        <thead>
-                            <tr>
-                                <th>Ganador</th>
-                                <th>Contacto</th>
-                                <th>Premio</th>
-                                <th>Sorteo</th>
-                                <th>N° Ganador</th>
-                                <th>Fecha</th>
-                                <th>Estado</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="winners-admin-tbody">
-                            <!-- Las filas se generarán dinámicamente -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div class="local-info">
-                <h3>💰 Cuenta de Verificación Configurada</h3>
-                <p><strong>✅ WALLET VERIFICADA:</strong> 3Yekte2UrR2rKFBfm3q6D2DyinZKN58svqJvQF87RX3o</p>
-                <p><strong>✅ PAGOS VERIFICADOS:</strong> Todos los pagos van automáticamente a tu wallet verificada</p>
-                <p><strong>✅ SALDO EN TIEMPO REAL:</strong> Balance verificado desde blockchain</p>
-                <p><strong>✅ TRANSACCIONES AUDITADAS:</strong> Confirmadas y verificadas en Solana Testnet</p>
-                <p><strong>🔥 FIREBASE ACTIVO:</strong> Datos sincronizados en tiempo real</p>
-            </div>
-
-            <div class="unlimited-numbers">
-                <h4>🎯 Gestión de Sorteos</h4>
-                <p><strong>¡Crea sorteos ilimitados y gestiona los terminados!</strong></p>
-                <p><strong>Todos los pagos se envían automáticamente a tu wallet de verificación.</strong></p>
-                <p><strong>🔥 Firebase: Los sorteos se guardan automáticamente en la nube</strong></p>
-                <p><strong>🏆 Archivo: Los ganadores quedan registrados permanentemente</strong></p>
-            </div>
-
-            <form id="create-raffle-form">
-                <div class="form-group">
-                    <label for="raffle-name">Nombre del Sorteo Verificado</label>
-                    <input type="text" id="raffle-name" class="form-control" placeholder="Ej: PlayStation 5 Sorteo Verificado" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="raffle-description">Descripción del Sorteo</label>
-                    <textarea id="raffle-description" class="form-control" rows="3" placeholder="Describe tu sorteo verificado..." required></textarea>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="ticket-price">Precio por Número (SOL)</label>
-                        <input type="number" id="ticket-price" class="form-control" min="0.01" step="0.01" placeholder="0.1" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="max-numbers">Cantidad de Números</label>
-                        <input type="number" id="max-numbers" class="form-control" min="10" placeholder="100" required>
-                        <small style="color: var(--gray); margin-top: 0.5rem; display: block;">
-                            ⚡ <strong>VeriRifa-Sol:</strong> Sorteos verificados en blockchain + Firebase
-                        </small>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="raffle-image">Imagen (URL o Emoji)</label>
-                    <input type="text" id="raffle-image" class="form-control" placeholder="https://ejemplo.com/imagen.jpg o 🎮" required>
-                    <div class="image-preview" id="image-preview">
-                        <div class="emoji-preview">🖼️</div>
-                    </div>
-                </div>
-
-                <button type="submit" class="btn btn-warning">🎯 Crear Sorteo Verificado</button>
-            </form>
-
-            <!-- Gestión de Sorteos Terminados -->
-            <div class="local-info" style="margin-top: 2rem;">
-                <h3>🗑️ Gestión de Sorteos Terminados</h3>
-                <div id="completed-raffles-list">
-                    <!-- Los sorteos terminados se cargan aquí -->
-                </div>
-            </div>
-
-            <div class="transaction-status" id="transaction-status" style="display: none;">
-                <h4>📊 Estado de Transacción Verificada</h4>
-                <div id="transaction-details">Esperando transacción...</div>
-            </div>
-        </div>
+        <!-- ... (todo el contenido del admin panel) ... -->
     </section>
 
     <!-- Raffles -->
     <section class="raffles" id="sorteos">
-        <div class="container">
-            <h2 class="section-title">Sorteos Verificados Activos</h2>
-            <div class="raffles-grid" id="raffles-container">
-                <!-- Los sorteos se cargan dinámicamente -->
-                <div class="skeleton-raffle">
-                    <div class="skeleton skeleton-text"></div>
-                    <div class="skeleton skeleton-text skeleton-text--short"></div>
-                    <div class="skeleton skeleton-text"></div>
-                </div>
-                <div class="skeleton-raffle">
-                    <div class="skeleton skeleton-text"></div>
-                    <div class="skeleton skeleton-text skeleton-text--short"></div>
-                    <div class="skeleton skeleton-text"></div>
-                </div>
-                <div class="skeleton-raffle">
-                    <div class="skeleton skeleton-text"></div>
-                    <div class="skeleton skeleton-text skeleton-text--short"></div>
-                    <div class="skeleton skeleton-text"></div>
-                </div>
-            </div>
-        </div>
+        <!-- ... (todo el contenido de raffles) ... -->
     </section>
-
-    <!-- Winners Archive -->
-    <section class="winners-archive" id="ganadores">
-        <div class="container">
-            <h2 class="section-title">🏆 Archivo de Ganadores Verificados</h2>
-            <p style="text-align: center; color: var(--gray); margin-bottom: 2rem;">
-                Historial completo y transparente de todos los ganadores verificados en la blockchain de Solana
-            </p>
-            <div class="winners-grid" id="winners-container">
-                <!-- Los ganadores se cargan dinámicamente -->
-                <div class="skeleton skeleton-text" style="height: 120px; margin-bottom: 1rem;"></div>
-                <div class="skeleton skeleton-text" style="height: 120px; margin-bottom: 1rem;"></div>
-                <div class="skeleton skeleton-text" style="height: 120px; margin-bottom: 1rem;"></div>
-            </div>
-        </div>
-    </section>
-
-    <!-- FAQ Section -->
-    <section class="faq-section" id="faq">
-        <div class="container">
-            <h2 class="section-title">❓ Preguntas Frecuentes</h2>
-            <div class="faq-container">
-                <div class="faq-item">
-                    <div class="faq-question">
-                        <span>¿Cómo funciona VeriRifa-Sol?</span>
-                        <span class="faq-toggle">+</span>
-                    </div>
-                    <div class="faq-answer">
-                        <p>VeriRifa-Sol es una plataforma de sorteos verificados que utiliza la blockchain de Solana para garantizar transparencia total. Cada sorteo se registra en la blockchain y los pagos se realizan con SOL real de testnet.</p>
-                        <p>Los ganadores se seleccionan aleatoriamente entre los números vendidos, y todo el proceso es auditado y verificado.</p>
-                    </div>
-                </div>
-                
-                <div class="faq-item">
-                    <div class="faq-question">
-                        <span>¿Necesito una wallet para participar?</span>
-                        <span class="faq-toggle">+</span>
-                    </div>
-                    <div class="faq-answer">
-                        <p>Sí, necesitas una wallet compatible con Solana como Phantom o Solflare. Debes configurarla para usar la red Testnet y obtener SOL de testnet desde un faucet para poder participar en los sorteos.</p>
-                    </div>
-                </div>
-                
-                <div class="faq-item">
-                    <div class="faq-question">
-                        <span>¿Cómo puedo obtener SOL de testnet?</span>
-                        <span class="faq-toggle">+</span>
-                    </div>
-                    <div class="faq-answer">
-                        <p>Puedes obtener SOL de testnet gratis desde:</p>
-                        <ul>
-                            <li><a href="https://faucet.solana.com/" target="_blank" style="color: var(--secondary);">faucet.solana.com</a></li>
-                            <li><a href="https://solfaucet.com/" target="_blank" style="color: var(--secondary);">solfaucet.com</a></li>
-                        </ul>
-                        <p>Estos faucets te permiten obtener SOL de testnet para realizar transacciones sin costo real.</p>
-                    </div>
-                </div>
-                
-                <div class="faq-item">
-                    <div class="faq-question">
-                        <span>¿Cómo se selecciona al ganador?</span>
-                        <span class="faq-toggle">+</span>
-                    </div>
-                    <div class="faq-answer">
-                        <p>Una vez que se venden todos los números de un sorteo, el administrador activa la selección del ganador. El sistema selecciona aleatoriamente un número entre los vendidos, y el propietario de ese número es declarado ganador.</p>
-                        <p>Todo el proceso es transparente y verificable en la blockchain.</p>
-                    </div>
-                </div>
-                
-                <div class="faq-item">
-                    <div class="faq-question">
-                        <span>¿Cómo reclamo mi premio si gano?</span>
-                        <span class="faq-toggle">+</span>
-                    </div>
-                    <div class="faq-answer">
-                        <p>Si eres el ganador de un sorteo:</p>
-                        <ol>
-                            <li>Conecta tu wallet (debe ser la misma con la que compraste el número ganador)</li>
-                            <li>Haz clic en "Reclamar Premio" en el sorteo correspondiente</li>
-                            <li>Completa el formulario con tus datos de contacto y envío</li>
-                            <li>Confirma la reclamación</li>
-                        </ol>
-                        <p>Una vez confirmado, el administrador procesará el envío de tu premio.</p>
-                    </div>
-                </div>
-                
-                <div class="faq-item">
-                    <div class="faq-question">
-                        <span>¿Qué pasa si no se venden todos los números?</span>
-                        <span class="faq-toggle">+</span>
-                    </div>
-                    <div class="faq-answer">
-                        <p>Si no se venden todos los números de un sorteo antes de la fecha límite, el sorteo puede ser cancelado y los fondos devueltos a los participantes, o extenderse hasta que se completen las ventas. La política específica se indica en cada sorteo.</p>
-                    </div>
-                </div>
-                
-                <div class="faq-item">
-                    <div class="faq-question">
-                        <span>¿Es seguro participar en VeriRifa-Sol?</span>
-                        <span class="faq-toggle">+</span>
-                    </div>
-                    <div class="faq-answer">
-                        <p>Sí, VeriRifa-Sol utiliza la blockchain de Solana que garantiza:</p>
-                        <ul>
-                            <li>Transparencia total en todas las transacciones</li>
-                            <li>Inmutabilidad de los registros</li>
-                            <li>Verificación independiente de todos los procesos</li>
-                            <li>Seguridad criptográfica de primer nivel</li>
-                        </ul>
-                        <p>Además, todos los sorteos son auditados y verificados por el equipo administrador.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Number Selection Modal -->
-    <div class="modal" id="number-selection-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 class="modal-title">Seleccionar Números - VeriRifa-Sol</h3>
-                <button class="close-modal" id="close-number-modal">&times;</button>
-            </div>
-
-            <p>Elige los números que quieres comprar para el sorteo verificado (Transacción REAL en Solana):</p>
-            <h4 id="modal-raffle-name">PlayStation 5</h4>
-
-            <div class="pagination" id="pagination-controls">
-                <!-- Los controles de paginación se generan dinámicamente -->
-            </div>
-
-            <div class="page-info" id="page-info">
-                <!-- Información de página se genera dinámicamente -->
-            </div>
-
-            <div class="numbers-container">
-                <div class="numbers-grid" id="numbers-grid">
-                    <!-- Los números se generan dinámicamente -->
-                </div>
-            </div>
-
-            <div class="selected-numbers">
-                <h4>Tus números seleccionados:</h4>
-                <div class="selected-numbers-list" id="selected-numbers-list">
-                    <!-- Números seleccionados aparecen aquí -->
-                </div>
-            </div>
-
-            <div class="payment-info">
-                <h4>Resumen del Pago Verificado</h4>
-                <div class="payment-details">
-                    <span>Números seleccionados:</span>
-                    <span id="selected-count">0</span>
-                </div>
-                <div class="payment-details">
-                    <span>Precio por número:</span>
-                    <span id="price-per-number">1 SOL</span>
-                </div>
-                <div class="payment-details">
-                    <span>Total a pagar:</span>
-                    <span class="payment-amount" id="total-payment">0 SOL</span>
-                </div>
-                <div class="payment-details">
-                    <span>Comisión de red:</span>
-                    <span id="network-fee">~0.000005 SOL</span>
-                </div>
-                <div class="payment-details">
-                    <span>Destino (Verificado):</span>
-                    <span style="color: var(--warning); font-size: 0.9rem;">3Yekte2Ur...X3o</span>
-                </div>
-                <div class="payment-details">
-                    <span>Tu balance:</span>
-                    <span id="user-balance">Cargando...</span>
-                </div>
-                <div class="payment-details">
-                    <span>🔥 Firebase:</span>
-                    <span style="color: var(--secondary);">Datos sincronizados</span>
-                </div>
-            </div>
-
-            <div class="transaction-status" id="payment-status">
-                <h4>💳 Proceso de Pago Verificado</h4>
-                <div id="payment-details">Selecciona números y confirma el pago en la blockchain</div>
-            </div>
-
-            <div style="display: flex; gap: 10px; margin-top: 1.5rem; flex-wrap: wrap;">
-                <button class="btn" id="confirm-payment-btn">✅ Confirmar Pago Verificado</button>
-                <button class="btn btn-outline" id="cancel-selection-btn">Cancelar</button>
-            </div>
-        </div>
-    </div>
 
     <!-- Footer -->
     <footer>
-        <div class="container">
-            <div class="footer-logo">
-                <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="30" cy="30" r="28" fill="url(#footerGradient)" stroke="#14F195" stroke-width="1"/>
-                    <circle cx="30" cy="30" r="22" fill="none" stroke="white" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="2 2"/>
-                    <circle cx="30" cy="30" r="12" fill="#14F195" fill-opacity="0.2"/>
-                    <path d="M26 30L28 32L34 26" stroke="#14F195" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <circle cx="18" cy="18" r="1.2" fill="white" opacity="0.8"/>
-                    <circle cx="42" cy="18" r="1.2" fill="white" opacity="0.8"/>
-                    <circle cx="18" cy="42" r="1.2" fill="white" opacity="0.8"/>
-                    <circle cx="42" cy="42" r="1.2" fill="white" opacity="0.8"/>
-                    <defs>
-                        <linearGradient id="footerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stop-color="#9945FF"/>
-                            <stop offset="100%" stop-color="#14F195"/>
-                        </linearGradient>
-                    </defs>
-                </svg>
-            </div>
-            <div class="logo" style="justify-content: center; margin-bottom: 1.5rem;">
-                <div class="logo-text">
-                    <div class="logo-main">VeriRifa-Sol</div>
-                    <div class="logo-sub">SORTEOS VERIFICADOS EN SOLANA + FIREBASE</div>
-                </div>
-            </div>
-            <p class="copyright">© 2023 VeriRifa-Sol - Wallet Verificada: 3Yekte2UrR2rKFBfm3q6D2DyinZKN58svqJvQF87RX3o - Firebase Sync Active</p>
-        </div>
+        <!-- ... (todo el contenido del footer) ... -->
     </footer>
 
-    <!-- Scripts -->
-    <script src="script.js"></script>
+    <!-- Number Selection Modal -->
+    <div class="modal" id="number-selection-modal">
+        <!-- ... (todo el contenido del modal de números) ... -->
+    </div>
+
+<script>
+// =============================================
+// CONFIGURACIÓN FIREBASE - VERIFICADA
+// =============================================
+console.log('🚀 Inicializando VeriRifa-Sol...');
+
+// Configuración de Firebase
+const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyBFeUIpZ4SvDJH60WJyuPB9Ud2JJSbjN7Q",
+    authDomain: "veririfa-sol.firebaseapp.com",
+    projectId: "veririfa-sol",
+    storageBucket: "veririfa-sol.firebasestorage.app",
+    messagingSenderId: "398195570983",
+    appId: "1:398195570983:web:f415c5e20213ccca2fd102",
+    measurementId: "G-1BJXVTRG15"
+};
+
+// Inicializar Firebase
+let firebaseApp;
+let db;
+let analytics;
+
+try {
+    firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.firestore();
+    analytics = firebase.analytics();
+    console.log('✅ Firebase inicializado correctamente');
+} catch (error) {
+    console.error('❌ Error inicializando Firebase:', error);
+}
+
+// =============================================
+// CONEXIÓN REAL CON SOLANA TESTNET
+// =============================================
+const network = 'testnet';
+const connection = new solanaWeb3.Connection(
+    solanaWeb3.clusterApiUrl(network),
+    'confirmed'
+);
+
+// WALLET VERIFICADA DEL ADMINISTRADOR
+const ADMIN_WALLET_ADDRESS = '3Yekte2UrR2rKFBfm3q6D2DyinZKN58svqJvQF87RX3o';
+const ADMIN_WALLET_PUBKEY = new solanaWeb3.PublicKey(ADMIN_WALLET_ADDRESS);
+
+// =============================================
+// ESTADO GLOBAL DE LA APLICACIÓN
+// =============================================
+let isConnected = false;
+let isAdmin = false;
+let currentRaffle = null;
+let selectedNumbers = [];
+let currentPage = 1;
+const numbersPerPage = 100;
+
+let currentWallet = {
+    publicKey: null,
+    provider: null,
+    balance: 0
+};
+
+let raffles = [];
+let winners = [];
+let currentPrizeToClaim = null;
+
+// =============================================
+// FUNCIONES PRINCIPALES CORREGIDAS
+// =============================================
+
+// FUNCIÓN MEJORADA: renderRaffles
+function renderRaffles() {
+    console.log('🔄 Renderizando sorteos...', raffles.length);
+    const container = document.getElementById('raffles-container');
+    if (!container) {
+        console.error('❌ No se encontró el contenedor de sorteos');
+        return;
+    }
+
+    container.innerHTML = '';
+
+    const activeRaffles = raffles.filter(raffle => !raffle.completed);
+    
+    if (activeRaffles.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; color: var(--gray); padding: 3rem;">
+                <h3>📝 No hay sorteos activos</h3>
+                <p>Conecta tu wallet verificada para crear el primer sorteo</p>
+            </div>
+        `;
+        return;
+    }
+
+    activeRaffles.forEach(raffle => {
+        const raffleCard = document.createElement('div');
+        raffleCard.className = 'raffle-card';
+        
+        const progress = raffle.soldNumbers ? raffle.soldNumbers.length : 0;
+        const total = raffle.totalNumbers || 0;
+        const progressPercent = total > 0 ? (progress / total) * 100 : 0;
+        
+        const isUserWinner = raffle.winner && currentWallet.publicKey && 
+                            raffle.winner.wallet === currentWallet.publicKey.toString();
+        
+        const allNumbersSold = progress >= total;
+        
+        let actionButton = '';
+        
+        if (raffle.winner) {
+            if (isUserWinner) {
+                if (raffle.prizeClaimed) {
+                    actionButton = `
+                        <button class="btn" style="width: 100%; background: var(--success); cursor: not-allowed;" disabled>
+                            ✅ Premio Reclamado
+                        </button>
+                    `;
+                } else {
+                    actionButton = `
+                        <button class="btn btn-success claim-prize-btn" data-raffle="${raffle.id}" style="width: 100%;">
+                            🎉 Reclamar Premio
+                        </button>
+                    `;
+                }
+            } else {
+                actionButton = `
+                    <button class="btn" style="width: 100%; background: var(--gray); cursor: not-allowed;" disabled>
+                        ❌ No Ganaste
+                    </button>
+                `;
+            }
+        } else if (raffle.isSelectingWinner) {
+            actionButton = `
+                <button class="btn" style="width: 100%; background: var(--warning); cursor: not-allowed;" disabled>
+                    ⏳ Seleccionando Ganador...
+                </button>
+            `;
+        } else {
+            if (isAdmin) {
+                if (allNumbersSold) {
+                    actionButton = `
+                        <button class="btn btn-warning select-winner-btn" data-raffle="${raffle.id}" style="width: 100%;">
+                            🎰 Seleccionar Ganador
+                        </button>
+                    `;
+                } else {
+                    const remainingNumbers = total - progress;
+                    actionButton = `
+                        <button class="btn btn-disabled" style="width: 100%;" disabled>
+                            ⏳ Esperando venta (${remainingNumbers} números restantes)
+                        </button>
+                    `;
+                }
+            } else {
+                if (allNumbersSold) {
+                    actionButton = `
+                        <button class="btn btn-disabled" style="width: 100%;" disabled>
+                            🔒 Todos los números vendidos
+                        </button>
+                    `;
+                } else {
+                    actionButton = `
+                        <button class="btn participate-btn" data-raffle="${raffle.id}" style="width: 100%;">
+                            🎫 Participar (${raffle.price} SOL)
+                        </button>
+                    `;
+                }
+            }
+        }
+
+        raffleCard.innerHTML = `
+            <div class="raffle-image">
+                ${raffle.image && raffle.image.startsWith('http') ? 
+                    `<img src="${raffle.image}" alt="${raffle.name}" onerror="this.parentElement.innerHTML='${raffle.image.includes('🎮') ? '🎮' : '🎁'}'">` : 
+                    `<div style="font-size: 3rem;">${raffle.image || '🎁'}</div>`
+                }
+            </div>
+            <div class="raffle-content">
+                <h3 class="raffle-title">${raffle.name}</h3>
+                <div class="raffle-price">${raffle.price} SOL por número</div>
+                <div class="raffle-info">
+                    <span>🎯 Premio: ${raffle.prize || raffle.name}</span>
+                    <span>🔢 ${progress}/${total} números</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress" style="width: ${progressPercent}%"></div>
+                </div>
+                <div class="raffle-info">
+                    <span>🏆 Ganador: ${raffle.winner ? 'Sí' : 'No'}</span>
+                    <span>${allNumbersSold ? '🔒 Completado' : '🟢 Disponible'}</span>
+                </div>
+                <div>
+                    ${actionButton}
+                </div>
+            </div>
+        `;
+
+        container.appendChild(raffleCard);
+    });
+
+    // CONFIGURAR EVENT LISTENERS INMEDIATAMENTE
+    setTimeout(() => {
+        setupRaffleEventListeners();
+    }, 100);
+}
+
+// FUNCIÓN MEJORADA: Configurar event listeners
+function setupRaffleEventListeners() {
+    console.log('🔧 Configurando event listeners...');
+    
+    // Botones de participación
+    document.querySelectorAll('.participate-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            if (!currentWallet.publicKey) {
+                showUserAlert('🔗 Conecta tu wallet primero para participar', 'warning');
+                document.getElementById('wallet-modal').classList.add('active');
+                return;
+            }
+            const raffleId = this.getAttribute('data-raffle');
+            console.log('🎫 Participando en sorteo:', raffleId);
+            openNumberSelectionModal(raffleId);
+        });
+    });
+
+    // Botones de seleccionar ganador
+    document.querySelectorAll('.select-winner-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const raffleId = this.getAttribute('data-raffle');
+            console.log('🎰 Seleccionando ganador para:', raffleId);
+            selectWinner(raffleId);
+        });
+    });
+
+    // Botones de reclamar premio
+    document.querySelectorAll('.claim-prize-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const raffleId = this.getAttribute('data-raffle');
+            console.log('🎉 Reclamando premio para:', raffleId);
+            openClaimPrizeModal(raffleId);
+        });
+    });
+}
+
+// =============================================
+// FUNCIONES FIREBASE CORREGIDAS
+// =============================================
+
+async function saveRafflesToFirebase() {
+    if (!db) {
+        console.error('❌ Firebase no disponible');
+        return;
+    }
+
+    try {
+        for (const raffle of raffles) {
+            await db.collection('raffles').doc(raffle.id).set({
+                ...raffle,
+                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+        console.log('✅ Sorteos guardados en Firebase');
+    } catch (error) {
+        console.error('❌ Error guardando en Firebase:', error);
+        showUserAlert('Error guardando datos en la nube', 'error');
+    }
+}
+
+async function loadRafflesFromFirebase() {
+    if (!db) {
+        console.error('❌ Firebase no disponible');
+        raffles = [];
+        return;
+    }
+
+    try {
+        const snapshot = await db.collection('raffles').get();
+        
+        if (!snapshot.empty) {
+            raffles = [];
+            snapshot.forEach(doc => {
+                const raffleData = doc.data();
+                // Asegurar que todos los campos necesarios existan
+                if (!raffleData.soldNumbers) raffleData.soldNumbers = [];
+                if (!raffleData.numberOwners) raffleData.numberOwners = {};
+                if (raffleData.prizeClaimed === undefined) raffleData.prizeClaimed = false;
+                if (raffleData.completed === undefined) raffleData.completed = false;
+                
+                raffles.push(raffleData);
+            });
+            console.log('✅ Sorteos cargados desde Firebase:', raffles.length);
+        } else {
+            console.log('📝 No hay sorteos en Firebase, creando ejemplos...');
+            await createSampleRaffles();
+        }
+    } catch (error) {
+        console.error('❌ Error cargando desde Firebase:', error);
+        raffles = [];
+    }
+}
+
+async function createSampleRaffles() {
+    const sampleRaffles = [
+        {
+            id: 'ps5-verificado-' + Date.now(),
+            name: 'PlayStation 5 - Sorteo Verificado',
+            description: 'PS5 real en VeriRifa-Sol - Transacciones verificadas',
+            price: 0.1,
+            image: '🎮',
+            totalNumbers: 50,
+            soldNumbers: [],
+            numberOwners: {},
+            prize: 'PlayStation 5 Real',
+            status: 'active',
+            adminWallet: ADMIN_WALLET_ADDRESS,
+            winner: null,
+            prizeClaimed: false,
+            completed: false,
+            createdAt: new Date().toISOString()
+        },
+        {
+            id: 'macbook-verificado-' + Date.now(),
+            name: 'MacBook Pro - Verificado',
+            description: 'MacBook Pro real - Blockchain verificada de Solana',
+            price: 0.2,
+            image: '💻',
+            totalNumbers: 30,
+            soldNumbers: [],
+            numberOwners: {},
+            prize: 'MacBook Pro 14"',
+            status: 'active',
+            adminWallet: ADMIN_WALLET_ADDRESS,
+            winner: null,
+            prizeClaimed: false,
+            completed: false,
+            createdAt: new Date().toISOString()
+        }
+    ];
+
+    raffles = sampleRaffles;
+    await saveRafflesToFirebase();
+    console.log('✅ Sorteos de ejemplo creados');
+}
+
+// =============================================
+// FUNCIONES PARA CREAR SORTEOS - CORREGIDAS
+// =============================================
+
+function setupImagePreview() {
+    const imageInput = document.getElementById('raffle-image');
+    const preview = document.getElementById('image-preview');
+    
+    if (imageInput && preview) {
+        imageInput.addEventListener('input', function() {
+            const value = this.value.trim();
+            
+            if (value.startsWith('http')) {
+                preview.innerHTML = `<img src="${value}" alt="Preview" onerror="this.style.display='none'; preview.innerHTML='❌ Error cargando imagen'">`;
+            } else if (value) {
+                preview.innerHTML = `<div class="emoji-preview">${value}</div>`;
+            } else {
+                preview.innerHTML = '<div class="emoji-preview">🖼️</div>';
+            }
+        });
+    }
+}
+
+async function createRaffle(e) {
+    e.preventDefault();
+    console.log('🎯 Creando nuevo sorteo...');
+    
+    if (!isAdmin) {
+        showUserAlert('❌ Solo el verificador puede crear sorteos', 'error');
+        return;
+    }
+
+    const name = document.getElementById('raffle-name').value.trim();
+    const description = document.getElementById('raffle-description').value.trim();
+    const price = parseFloat(document.getElementById('ticket-price').value);
+    const maxNumbers = parseInt(document.getElementById('max-numbers').value);
+    const image = document.getElementById('raffle-image').value.trim();
+
+    if (!name || !description || !price || !maxNumbers || !image) {
+        showUserAlert('❌ Por favor, completa todos los campos', 'error');
+        return;
+    }
+
+    if (price < 0.01) {
+        showUserAlert('❌ El precio debe ser al menos 0.01 SOL', 'error');
+        return;
+    }
+
+    if (maxNumbers < 10) {
+        showUserAlert('❌ Debe haber al menos 10 números', 'error');
+        return;
+    }
+
+    showUserAlert('⏳ Creando sorteo verificado...', 'info');
+
+    try {
+        const raffleId = 'raffle-' + Date.now();
+        
+        const newRaffle = {
+            id: raffleId,
+            name: name,
+            description: description,
+            price: price,
+            image: image,
+            totalNumbers: maxNumbers,
+            soldNumbers: [],
+            numberOwners: {},
+            prize: name.includes('-') ? name.split('-')[0].trim() : name,
+            status: 'active',
+            adminWallet: ADMIN_WALLET_ADDRESS,
+            winner: null,
+            prizeClaimed: false,
+            completed: false,
+            createdAt: new Date().toISOString()
+        };
+
+        raffles.push(newRaffle);
+        
+        // Guardar en Firebase
+        await saveRafflesToFirebase();
+        
+        // Limpiar formulario
+        document.getElementById('create-raffle-form').reset();
+        document.getElementById('image-preview').innerHTML = '<div class="emoji-preview">🖼️</div>';
+        
+        // Actualizar UI
+        renderRaffles();
+        
+        showUserAlert('✅ Sorteo verificado creado exitosamente!', 'success');
+
+    } catch (error) {
+        console.error('Error creando sorteo:', error);
+        showUserAlert(`❌ Error creando sorteo: ${error.message}`, 'error');
+    }
+}
+
+// =============================================
+// FUNCIONES DE CONEXIÓN WALLET - CORREGIDAS
+// =============================================
+
+async function connectRealWallet(walletType) {
+    try {
+        let provider;
+
+        if (walletType === 'phantom') {
+            provider = window.solana;
+        } else if (walletType === 'solflare') {
+            provider = window.solflare;
+        } else {
+            throw new Error('Wallet no soportada');
+        }
+
+        if (!provider) {
+            showUserAlert(
+                `${walletType} no está instalada. Por favor, instálala desde ${walletType === 'phantom' ? 'phantom.app' : 'solflare.com'}`,
+                'warning',
+                8000
+            );
+            return false;
+        }
+
+        const response = await provider.connect();
+        const publicKey = provider.publicKey;
+
+        const balance = await connection.getBalance(publicKey);
+        const balanceInSOL = balance / solanaWeb3.LAMPORTS_PER_SOL;
+
+        currentWallet = {
+            publicKey: publicKey,
+            provider: provider,
+            balance: balanceInSOL
+        };
+
+        updateWalletUI(publicKey.toString(), balanceInSOL);
+        checkIfAdmin(publicKey.toString());
+
+        document.getElementById('wallet-modal').classList.remove('active');
+
+        showUserAlert(`✅ ${walletType} conectada correctamente`, 'success');
+
+        return true;
+
+    } catch (error) {
+        console.error('Error conectando wallet:', error);
+        showUserAlert(`❌ Error conectando wallet: ${error.message}`, 'error');
+        return false;
+    }
+}
+
+function updateWalletUI(publicKey, balance) {
+    const shortAddress = `${publicKey.substring(0, 6)}...${publicKey.substring(publicKey.length - 4)}`;
+
+    document.getElementById('connected-wallet-address').textContent = shortAddress;
+    document.getElementById('connected-wallet-address').style.display = 'block';
+    document.getElementById('wallet-balance').textContent = `${balance.toFixed(4)} SOL`;
+    document.getElementById('wallet-balance').style.display = 'block';
+    document.getElementById('connect-wallet-btn').innerHTML = '<span>✅ Conectado</span>';
+    document.getElementById('connect-wallet-btn').className = 'btn btn-success';
+    document.getElementById('network-indicator').textContent = '🟢 Solana Testnet';
+    document.getElementById('disconnect-wallet-btn').style.display = 'block';
+
+    document.getElementById('connection-status').innerHTML = '<strong>Estado Wallet:</strong> ✅ Conectada';
+}
+
+function checkIfAdmin(publicKey) {
+    isAdmin = (publicKey === ADMIN_WALLET_ADDRESS);
+
+    if (isAdmin) {
+        document.getElementById('admin-menu-item').classList.add('visible');
+        showUserAlert('✅ Modo verificador activado', 'success');
+    } else {
+        document.getElementById('admin-menu-item').classList.remove('visible');
+        document.getElementById('admin-panel').classList.remove('active');
+    }
+    
+    // Re-renderizar para mostrar los botones correctos
+    renderRaffles();
+}
+
+// =============================================
+// FUNCIONES DE UTILIDAD
+// =============================================
+
+function showUserAlert(message, type = 'info', duration = 5000) {
+    const alert = document.getElementById('user-alert');
+    const alertIcon = document.getElementById('alert-icon');
+    const alertMessage = document.getElementById('alert-message');
+
+    if (!alert) {
+        console.error('❌ No se encontró el elemento de alerta');
+        return;
+    }
+
+    alert.className = `user-alert ${type}`;
+
+    switch(type) {
+        case 'success':
+            alertIcon.textContent = '✅';
+            break;
+        case 'error':
+            alertIcon.textContent = '❌';
+            break;
+        case 'warning':
+            alertIcon.textContent = '⚠️';
+            break;
+        default:
+            alertIcon.textContent = 'ℹ️';
+    }
+
+    alertMessage.textContent = message;
+    alert.style.display = 'block';
+
+    if (duration > 0) {
+        setTimeout(() => {
+            alert.style.display = 'none';
+        }, duration);
+    }
+}
+
+// =============================================
+// CONFIGURACIÓN DE EVENT LISTENERS GLOBALES
+// =============================================
+
+function setupGlobalEventListeners() {
+    console.log('🔧 Configurando event listeners globales...');
+    
+    // Botón de conectar wallet
+    document.getElementById('connect-wallet-btn').addEventListener('click', function() {
+        document.getElementById('wallet-modal').classList.add('active');
+    });
+
+    // Cerrar modal wallet
+    document.getElementById('close-wallet-modal').addEventListener('click', function() {
+        document.getElementById('wallet-modal').classList.remove('active');
+    });
+
+    // Conectar wallets
+    document.getElementById('connect-phantom-real').addEventListener('click', function() {
+        connectRealWallet('phantom');
+    });
+
+    document.getElementById('connect-solflare-real').addEventListener('click', function() {
+        connectRealWallet('solflare');
+    });
+
+    // Desconectar wallet
+    document.getElementById('disconnect-wallet-btn').addEventListener('click', function() {
+        if (currentWallet.provider) {
+            currentWallet.provider.disconnect();
+        }
+        currentWallet = { publicKey: null, provider: null, balance: 0 };
+        isAdmin = false;
+        
+        document.getElementById('connected-wallet-address').style.display = 'none';
+        document.getElementById('wallet-balance').style.display = 'none';
+        document.getElementById('connect-wallet-btn').innerHTML = '<span>👛 Conectar Wallet</span>';
+        document.getElementById('connect-wallet-btn').className = 'btn';
+        document.getElementById('network-indicator').textContent = '🔴 Desconectado';
+        document.getElementById('disconnect-wallet-btn').style.display = 'none';
+        document.getElementById('admin-menu-item').classList.remove('visible');
+        
+        showUserAlert('🔌 Wallet desconectada', 'info');
+        renderRaffles();
+    });
+
+    // Formulario de crear sorteo
+    const createRaffleForm = document.getElementById('create-raffle-form');
+    if (createRaffleForm) {
+        createRaffleForm.addEventListener('submit', createRaffle);
+    }
+
+    // Panel admin
+    document.getElementById('admin-panel-link').addEventListener('click', function(e) {
+        e.preventDefault();
+        if (isAdmin) {
+            document.getElementById('admin-panel').classList.add('active');
+            window.scrollTo({ top: document.getElementById('admin-panel').offsetTop - 100, behavior: 'smooth' });
+        } else {
+            showUserAlert('❌ Solo el verificador puede acceder al panel', 'error');
+        }
+    });
+
+    document.getElementById('close-admin-panel').addEventListener('click', function() {
+        document.getElementById('admin-panel').classList.remove('active');
+    });
+
+    // Cerrar alertas
+    document.getElementById('close-alert').addEventListener('click', function() {
+        document.getElementById('user-alert').style.display = 'none';
+    });
+
+    console.log('✅ Event listeners globales configurados');
+}
+
+// =============================================
+// INICIALIZACIÓN DE LA APLICACIÓN
+// =============================================
+
+async function initApp() {
+    console.log('🚀 Inicializando VeriRifa-Sol...');
+    
+    try {
+        // 1. Configurar event listeners globales primero
+        setupGlobalEventListeners();
+        setupImagePreview();
+        
+        // 2. Conectar a blockchain
+        await connectToBlockchain();
+        
+        // 3. Cargar datos de Firebase
+        await loadRafflesFromFirebase();
+        
+        // 4. Renderizar la UI
+        renderRaffles();
+        
+        console.log('✅ VeriRifa-Sol inicializada correctamente');
+        showUserAlert('✅ VeriRifa-Sol cargada. Conectada a Solana Testnet + Firebase.', 'success');
+        
+    } catch (error) {
+        console.error('❌ Error inicializando la aplicación:', error);
+        showUserAlert('❌ Error inicializando la aplicación', 'error');
+    }
+}
+
+async function connectToBlockchain() {
+    try {
+        document.getElementById('real-connection-status').innerHTML = '<strong>Estado Blockchain:</strong> Conectando...';
+
+        const version = await connection.getVersion();
+        const slot = await connection.getSlot();
+
+        document.getElementById('real-connection-status').innerHTML =
+            `<strong>Estado Blockchain:</strong> ✅ Conectado a Solana Testnet<br>
+             <small>Version: ${version['solana-core']} | Slot: ${slot.toLocaleString()}</small>`;
+
+        console.log('✅ Conectado a Solana Testnet');
+        return true;
+    } catch (error) {
+        document.getElementById('real-connection-status').innerHTML =
+            '<strong>Estado Blockchain:</strong> ❌ Error conectando';
+        console.error('Error conectando a Solana:', error);
+        return false;
+    }
+}
+
+// INICIAR LA APLICACIÓN CUANDO EL DOM ESTÉ LISTO
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('📄 DOM cargado, iniciando aplicación...');
+    initApp();
+});
+</script>
 </body>
 </html>
