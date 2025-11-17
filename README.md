@@ -20,4 +20,4 @@ Plataforma de sorteos verificados en Solana Blockchain.
 - **Wallets**: Phantom, Solflare integration
 - **Styling**: CSS Grid, Flexbox, Variables CSS
 
-## 📦 Estructura del Proyecto
+## 📦 Estructura del Proyecto 
