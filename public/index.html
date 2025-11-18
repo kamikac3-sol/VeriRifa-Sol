@@ -439,7 +439,8 @@
                 <p><strong>🏆 Archivo: Los ganadores quedan registrados permanentemente</strong></p>
             </div>
 
-            <form id="create-raffle-form">
+            <!-- FORMULARIO CORREGIDO -->
+            <form id="create-raffle-form" novalidate>
                 <div class="form-group">
                     <label for="raffle-name">Nombre del Sorteo Verificado</label>
                     <input type="text" id="raffle-name" class="form-control" placeholder="Ej: PlayStation 5 Sorteo Verificado" required>
@@ -473,7 +474,8 @@
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-warning">🎯 Crear Sorteo Verificado</button>
+                <!-- BOTÓN CORREGIDO: type="button" en lugar de type="submit" -->
+                <button type="button" class="btn btn-warning" id="create-raffle-btn">🎯 Crear Sorteo Verificado</button>
             </form>
 
             <!-- Gestión de Sorteos Terminados -->
