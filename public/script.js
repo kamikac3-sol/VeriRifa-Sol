@@ -40,6 +40,7 @@ async function initializeApp() {
         // Primero configurar todos los event listeners
         setupEventListeners();
         setupAdditionalEventListeners();
+        setupCreateRaffleForm();
         
         // Luego inicializar Firebase
         await initializeFirebase();
@@ -195,23 +196,89 @@ async function loadWinnersFromFirebase() {
     }
 }
 
-async function saveRafflesToFirebase() {
-    if (!window.db) {
-        console.error('❌ Firebase no disponible');
-        return;
-    }
+// ===== CREACIÓN DE SORTEOS =====
+function setupCreateRaffleForm() {
+    const createRaffleForm = document.getElementById('create-raffle-form');
+    if (createRaffleForm) {
+        createRaffleForm.addEventListener('submit', async function(e) {
+            e.preventDefault(); // Esto evita que la página se recargue
+            console.log('📝 Formulario de crear sorteo enviado');
+            
+            if (!appState.isAdmin) {
+                showUserAlert('❌ Solo el verificador puede crear sorteos', 'error');
+                return;
+            }
 
+            const raffleName = document.getElementById('raffle-name').value;
+            const raffleDescription = document.getElementById('raffle-description').value;
+            const ticketPrice = parseFloat(document.getElementById('ticket-price').value);
+            const maxNumbers = parseInt(document.getElementById('max-numbers').value);
+            const raffleImage = document.getElementById('raffle-image').value;
+
+            if (!raffleName || !raffleDescription || !ticketPrice || !maxNumbers || !raffleImage) {
+                showUserAlert('❌ Por favor, completa todos los campos', 'error');
+                return;
+            }
+
+            if (ticketPrice <= 0) {
+                showUserAlert('❌ El precio debe ser mayor a 0', 'error');
+                return;
+            }
+
+            if (maxNumbers < 10) {
+                showUserAlert('❌ La cantidad mínima de números es 10', 'error');
+                return;
+            }
+
+            await createRaffle(raffleName, raffleDescription, ticketPrice, maxNumbers, raffleImage);
+        });
+    }
+}
+
+async function createRaffle(name, description, price, totalNumbers, image) {
     try {
-        for (const raffle of appState.raffles) {
-            await db.collection('raffles').doc(raffle.id).set({
-                ...raffle,
-                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-            });
+        console.log('🔄 Creando sorteo:', { name, price, totalNumbers });
+        
+        const raffleId = 'raffle_' + Date.now();
+        
+        const newRaffle = {
+            id: raffleId,
+            name: name,
+            description: description,
+            price: price,
+            totalNumbers: totalNumbers,
+            soldNumbers: [],
+            numberOwners: {},
+            image: image,
+            prize: name,
+            winner: null,
+            prizeClaimed: false,
+            completed: false,
+            isSelectingWinner: false,
+            shippingStatus: 'pending',
+            createdDate: new Date().toISOString(),
+            createdBy: ADMIN_WALLET_ADDRESS
+        };
+
+        appState.raffles.push(newRaffle);
+        
+        // Guardar en Firebase
+        if (window.db) {
+            await db.collection('raffles').doc(raffleId).set(newRaffle);
         }
-        console.log('✅ Sorteos guardados en Firebase');
+
+        // Limpiar formulario
+        document.getElementById('create-raffle-form').reset();
+        document.getElementById('image-preview').innerHTML = '<div class="emoji-preview">🖼️</div>';
+
+        // Actualizar UI
+        renderRaffles();
+        
+        showUserAlert('✅ Sorteo creado exitosamente en VeriRifa-Sol', 'success');
+        
     } catch (error) {
-        console.error('❌ Error guardando en Firebase:', error);
-        showUserAlert('Error guardando datos en la nube', 'error');
+        console.error('Error creando sorteo:', error);
+        showUserAlert('❌ Error creando sorteo: ' + error.message, 'error');
     }
 }
 
@@ -616,87 +683,6 @@ function renderWinnersArchive() {
 
         winnersContainer.appendChild(winnerCard);
     });
-}
-
-// ===== CREACIÓN DE SORTEOS =====
-document.getElementById('create-raffle-form').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    console.log('📝 Formulario de crear sorteo enviado');
-    
-    if (!appState.isAdmin) {
-        showUserAlert('❌ Solo el verificador puede crear sorteos', 'error');
-        return;
-    }
-
-    const raffleName = document.getElementById('raffle-name').value;
-    const raffleDescription = document.getElementById('raffle-description').value;
-    const ticketPrice = parseFloat(document.getElementById('ticket-price').value);
-    const maxNumbers = parseInt(document.getElementById('max-numbers').value);
-    const raffleImage = document.getElementById('raffle-image').value;
-
-    if (!raffleName || !raffleDescription || !ticketPrice || !maxNumbers || !raffleImage) {
-        showUserAlert('❌ Por favor, completa todos los campos', 'error');
-        return;
-    }
-
-    if (ticketPrice <= 0) {
-        showUserAlert('❌ El precio debe ser mayor a 0', 'error');
-        return;
-    }
-
-    if (maxNumbers < 10) {
-        showUserAlert('❌ La cantidad mínima de números es 10', 'error');
-        return;
-    }
-
-    await createRaffle(raffleName, raffleDescription, ticketPrice, maxNumbers, raffleImage);
-});
-
-async function createRaffle(name, description, price, totalNumbers, image) {
-    try {
-        console.log('🔄 Creando sorteo:', { name, price, totalNumbers });
-        
-        const raffleId = 'raffle_' + Date.now();
-        
-        const newRaffle = {
-            id: raffleId,
-            name: name,
-            description: description,
-            price: price,
-            totalNumbers: totalNumbers,
-            soldNumbers: [],
-            numberOwners: {},
-            image: image,
-            prize: name,
-            winner: null,
-            prizeClaimed: false,
-            completed: false,
-            isSelectingWinner: false,
-            shippingStatus: 'pending',
-            createdDate: new Date().toISOString(),
-            createdBy: ADMIN_WALLET_ADDRESS
-        };
-
-        appState.raffles.push(newRaffle);
-        
-        // Guardar en Firebase
-        if (window.db) {
-            await db.collection('raffles').doc(raffleId).set(newRaffle);
-        }
-
-        // Limpiar formulario
-        document.getElementById('create-raffle-form').reset();
-        document.getElementById('image-preview').innerHTML = '<div class="emoji-preview">🖼️</div>';
-
-        // Actualizar UI
-        renderRaffles();
-        
-        showUserAlert('✅ Sorteo creado exitosamente en VeriRifa-Sol', 'success');
-        
-    } catch (error) {
-        console.error('Error creando sorteo:', error);
-        showUserAlert('❌ Error creando sorteo: ' + error.message, 'error');
-    }
 }
 
 // ===== SELECCIÓN DE NÚMEROS =====
