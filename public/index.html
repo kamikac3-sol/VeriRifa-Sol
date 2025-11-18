@@ -143,6 +143,82 @@
         </div>
     </div>
 
+    <!-- Number Selection Modal -->
+    <div class="modal" id="number-selection-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Seleccionar Números - VeriRifa-Sol</h3>
+                <button class="close-modal" id="close-number-modal">&times;</button>
+            </div>
+
+            <p>Elige los números que quieres comprar para el sorteo verificado (Transacción REAL en Solana):</p>
+            <h4 id="modal-raffle-name">PlayStation 5</h4>
+
+            <div class="pagination" id="pagination-controls">
+                <!-- Los controles de paginación se generan dinámicamente -->
+            </div>
+
+            <div class="page-info" id="page-info">
+                <!-- Información de página se genera dinámicamente -->
+            </div>
+
+            <div class="numbers-container">
+                <div class="numbers-grid" id="numbers-grid">
+                    <!-- Los números se generan dinámicamente -->
+                </div>
+            </div>
+
+            <div class="selected-numbers">
+                <h4>Tus números seleccionados:</h4>
+                <div class="selected-numbers-list" id="selected-numbers-list">
+                    <!-- Números seleccionados aparecen aquí -->
+                </div>
+            </div>
+
+            <div class="payment-info">
+                <h4>Resumen del Pago Verificado</h4>
+                <div class="payment-details">
+                    <span>Números seleccionados:</span>
+                    <span id="selected-count">0</span>
+                </div>
+                <div class="payment-details">
+                    <span>Precio por número:</span>
+                    <span id="price-per-number">1 SOL</span>
+                </div>
+                <div class="payment-details">
+                    <span>Total a pagar:</span>
+                    <span class="payment-amount" id="total-payment">0 SOL</span>
+                </div>
+                <div class="payment-details">
+                    <span>Comisión de red:</span>
+                    <span id="network-fee">~0.000005 SOL</span>
+                </div>
+                <div class="payment-details">
+                    <span>Destino (Verificado):</span>
+                    <span style="color: var(--warning); font-size: 0.9rem;">3Yekte2Ur...X3o</span>
+                </div>
+                <div class="payment-details">
+                    <span>Tu balance:</span>
+                    <span id="user-balance">Cargando...</span>
+                </div>
+                <div class="payment-details">
+                    <span>🔥 Firebase:</span>
+                    <span style="color: var(--secondary);">Datos sincronizados</span>
+                </div>
+            </div>
+
+            <div class="transaction-status" id="payment-status">
+                <h4>💳 Proceso de Pago Verificado</h4>
+                <div id="payment-details">Selecciona números y confirma el pago en la blockchain</div>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 1.5rem; flex-wrap: wrap;">
+                <button class="btn" id="confirm-payment-btn">✅ Confirmar Pago Verificado</button>
+                <button class="btn btn-outline" id="cancel-selection-btn">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Header -->
     <header>
         <div class="container">
@@ -554,82 +630,6 @@
             </div>
         </div>
     </section>
-
-    <!-- Number Selection Modal -->
-    <div class="modal" id="number-selection-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 class="modal-title">Seleccionar Números - VeriRifa-Sol</h3>
-                <button class="close-modal" id="close-number-modal">&times;</button>
-            </div>
-
-            <p>Elige los números que quieres comprar para el sorteo verificado (Transacción REAL en Solana):</p>
-            <h4 id="modal-raffle-name">PlayStation 5</h4>
-
-            <div class="pagination" id="pagination-controls">
-                <!-- Los controles de paginación se generan dinámicamente -->
-            </div>
-
-            <div class="page-info" id="page-info">
-                <!-- Información de página se genera dinámicamente -->
-            </div>
-
-            <div class="numbers-container">
-                <div class="numbers-grid" id="numbers-grid">
-                    <!-- Los números se generan dinámicamente -->
-                </div>
-            </div>
-
-            <div class="selected-numbers">
-                <h4>Tus números seleccionados:</h4>
-                <div class="selected-numbers-list" id="selected-numbers-list">
-                    <!-- Números seleccionados aparecen aquí -->
-                </div>
-            </div>
-
-            <div class="payment-info">
-                <h4>Resumen del Pago Verificado</h4>
-                <div class="payment-details">
-                    <span>Números seleccionados:</span>
-                    <span id="selected-count">0</span>
-                </div>
-                <div class="payment-details">
-                    <span>Precio por número:</span>
-                    <span id="price-per-number">1 SOL</span>
-                </div>
-                <div class="payment-details">
-                    <span>Total a pagar:</span>
-                    <span class="payment-amount" id="total-payment">0 SOL</span>
-                </div>
-                <div class="payment-details">
-                    <span>Comisión de red:</span>
-                    <span id="network-fee">~0.000005 SOL</span>
-                </div>
-                <div class="payment-details">
-                    <span>Destino (Verificado):</span>
-                    <span style="color: var(--warning); font-size: 0.9rem;">3Yekte2Ur...X3o</span>
-                </div>
-                <div class="payment-details">
-                    <span>Tu balance:</span>
-                    <span id="user-balance">Cargando...</span>
-                </div>
-                <div class="payment-details">
-                    <span>🔥 Firebase:</span>
-                    <span style="color: var(--secondary);">Datos sincronizados</span>
-                </div>
-            </div>
-
-            <div class="transaction-status" id="payment-status">
-                <h4>💳 Proceso de Pago Verificado</h4>
-                <div id="payment-details">Selecciona números y confirma el pago en la blockchain</div>
-            </div>
-
-            <div style="display: flex; gap: 10px; margin-top: 1.5rem; flex-wrap: wrap;">
-                <button class="btn" id="confirm-payment-btn">✅ Confirmar Pago Verificado</button>
-                <button class="btn btn-outline" id="cancel-selection-btn">Cancelar</button>
-            </div>
-        </div>
-    </div>
 
     <!-- Footer -->
     <footer>
