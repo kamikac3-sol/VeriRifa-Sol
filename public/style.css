@@ -1,643 +1,1419 @@
-// ===== CONFIGURACIÓN Y CONSTANTES =====
-const FIREBASE_CONFIG = {
-    apiKey: "AIzaSyBFeUIpZ4SvDJH60WJyuPB9Ud2JJSbjN7Q",
-    authDomain: "veririfa-sol.firebaseapp.com",
-    projectId: "veririfa-sol",
-    storageBucket: "veririfa-sol.firebasestorage.app",
-    messagingSenderId: "398195570983",
-    appId: "1:398195570983:web:f415c5e20213ccca2fd102",
-    measurementId: "G-1BJXVTRG15"
-};
+/* ===== VARIABLES Y RESET ===== */
+:root {
+    --primary: #9945FF;
+    --secondary: #14F195;
+    --dark: #121212;
+    --light: #f8f9fa;
+    --gray: #6c757d;
+    --success: #28a745;
+    --danger: #dc3545;
+    --warning: #ffc107;
+    --info: #17a2b8;
+}
 
-const ADMIN_WALLET_ADDRESS = '3Yekte2UrR2rKFBfm3q6D2DyinZKN58svqJvQF87RX3o';
-const network = 'testnet';
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
 
-// ===== ESTADO DE LA APLICACIÓN =====
-let appState = {
-    isConnected: false,
-    isAdmin: false,
-    currentWallet: {
-        publicKey: null,
-        provider: null,
-        balance: 0
-    },
-    raffles: [],
-    winners: [],
-    currentRaffle: null,
-    selectedNumbers: [],
-    currentPage: 1
-};
+body {
+    background-color: var(--dark);
+    color: var(--light);
+    line-height: 1.6;
+    overflow-x: hidden;
+    padding-top: 80px;
+}
 
-// ===== INICIALIZACIÓN =====
-document.addEventListener('DOMContentLoaded', function() {
-    initializeApp();
-});
+.container {
+    width: 95%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 10px;
+}
 
-async function initializeApp() {
-    try {
-        await initializeFirebase();
-        await loadInitialData();
-        setupEventListeners();
-        await connectToBlockchain();
-        showUserAlert('✅ VeriRifa-Sol cargada correctamente', 'success');
-    } catch (error) {
-        console.error('Error inicializando la aplicación:', error);
-        showUserAlert('❌ Error al cargar la aplicación', 'error');
+/* ===== HEADER ===== */
+header {
+    background-color: rgba(18, 18, 18, 0.95);
+    backdrop-filter: blur(10px);
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+    border-bottom: 1px solid rgba(153, 69, 255, 0.2);
+    top: 0;
+    left: 0;
+}
+
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem 0;
+    flex-wrap: wrap;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    flex-shrink: 0;
+}
+
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.logo-icon {
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logo-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.logo-main {
+    font-size: 1.2rem;
+    font-weight: bold;
+    background: linear-gradient(45deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1;
+}
+
+.logo-sub {
+    font-size: 0.6rem;
+    color: var(--gray);
+    font-weight: normal;
+    line-height: 1;
+    margin-top: 2px;
+}
+
+.nav-links {
+    display: flex;
+    list-style: none;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 0.5rem 0;
+}
+
+.nav-links li {
+    margin: 0.3rem;
+}
+
+.nav-links a {
+    color: var(--light);
+    text-decoration: none;
+    transition: color 0.3s;
+    font-size: 0.9rem;
+    padding: 0.3rem 0.5rem;
+}
+
+.nav-links a:hover {
+    color: var(--secondary);
+}
+
+.admin-menu-item {
+    display: none;
+}
+
+.admin-menu-item.visible {
+    display: block;
+}
+
+.admin-badge {
+    background: var(--warning);
+    color: var(--dark);
+    padding: 0.2rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    margin-left: 0.3rem;
+}
+
+/* ===== BOTONES ===== */
+.btn {
+    display: inline-block;
+    background: linear-gradient(45deg, var(--primary), var(--secondary));
+    color: var(--dark);
+    padding: 0.6rem 1.2rem;
+    border-radius: 50px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: transform 0.3s, box-shadow 0.3s;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    text-align: center;
+    touch-action: manipulation;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(153, 69, 255, 0.3);
+}
+
+.btn-outline {
+    background: transparent;
+    border: 2px solid var(--primary);
+    color: var(--primary);
+}
+
+.btn-outline:hover {
+    background: var(--primary);
+    color: var(--dark);
+}
+
+.btn-danger {
+    background: var(--danger);
+    color: white;
+}
+
+.btn-warning {
+    background: var(--warning);
+    color: var(--dark);
+}
+
+.btn-success {
+    background: var(--success);
+    color: white;
+}
+
+.btn-info {
+    background: var(--info);
+    color: white;
+}
+
+.btn-small {
+    padding: 0.3rem 0.8rem;
+    font-size: 0.8rem;
+}
+
+.btn-disabled {
+    background: var(--gray);
+    color: var(--light);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.btn-disabled:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+/* ===== WALLET CONNECTOR ===== */
+.wallet-connector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 0.5rem 0;
+}
+
+.wallet-address {
+    font-family: monospace;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.4rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.7rem;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wallet-balance {
+    background: rgba(20, 241, 149, 0.2);
+    color: var(--secondary);
+    padding: 0.3rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: bold;
+}
+
+.solana-network {
+    background: rgba(153, 69, 255, 0.2);
+    color: var(--primary);
+    padding: 0.3rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.6rem;
+    font-weight: bold;
+    border: 1px solid var(--primary);
+}
+
+/* ===== HERO SECTION ===== */
+.hero {
+    padding: 40px 0 30px;
+    text-align: center;
+    background: linear-gradient(135deg, rgba(153, 69, 255, 0.1), rgba(20, 241, 149, 0.1));
+}
+
+.hero h1 {
+    font-size: 2.2rem;
+    margin-bottom: 1rem;
+    background: linear-gradient(45deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1.2;
+}
+
+.hero-logo {
+    margin-bottom: 1.5rem;
+}
+
+.hero-logo svg {
+    width: 100px;
+    height: 100px;
+    filter: drop-shadow(0 5px 15px rgba(153, 69, 255, 0.3));
+}
+
+.hero p {
+    font-size: 1rem;
+    max-width: 100%;
+    margin: 0 auto 1.5rem;
+    color: var(--gray);
+    padding: 0 10px;
+}
+
+.trust-badges {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 1.5rem 0;
+}
+
+.trust-badge {
+    background: rgba(20, 241, 149, 0.1);
+    color: var(--secondary);
+    padding: 0.6rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    border: 1px solid rgba(20, 241, 149, 0.3);
+}
+
+.trust-badge:before {
+    content: "✓";
+    margin-right: 6px;
+    font-weight: bold;
+}
+
+.local-info {
+    background: rgba(153, 69, 255, 0.1);
+    border: 1px solid var(--primary);
+    border-radius: 10px;
+    padding: 1.2rem;
+    margin: 1.5rem 0;
+    text-align: left;
+    font-size: 0.9rem;
+}
+
+.local-info h3 {
+    color: var(--primary);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    font-size: 1.1rem;
+}
+
+.local-info h3:before {
+    content: "🎯";
+    margin-right: 8px;
+}
+
+/* ===== MODALES ===== */
+.wallet-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    z-index: 3000;
+    align-items: center;
+    justify-content: center;
+    padding: 15px;
+}
+
+.wallet-modal.active {
+    display: flex;
+}
+
+.wallet-modal-content {
+    background-color: var(--dark);
+    border-radius: 15px;
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 1.5rem;
+    border: 1px solid var(--primary);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.connection-status {
+    background: rgba(20, 241, 149, 0.1);
+    border: 1px solid var(--secondary);
+    border-radius: 10px;
+    padding: 0.8rem;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+}
+
+.connection-status.error {
+    background: rgba(220, 53, 69, 0.1);
+    border-color: var(--danger);
+}
+
+.solana-simulation {
+    background: rgba(153, 69, 255, 0.1);
+    border: 1px solid var(--primary);
+    border-radius: 10px;
+    padding: 1.2rem;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+}
+
+/* ===== ADMIN PANEL ===== */
+.admin-panel {
+    display: none;
+    padding: 40px 0;
+    background: rgba(153, 69, 255, 0.05);
+    border-top: 1px solid var(--primary);
+    border-bottom: 1px solid var(--primary);
+}
+
+.admin-panel.active {
+    display: block;
+}
+
+.admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.admin-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.admin-wallet-info {
+    background: rgba(20, 241, 149, 0.1);
+    border: 1px solid var(--secondary);
+    border-radius: 10px;
+    padding: 1.2rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+}
+
+.admin-wallet-info h3 {
+    color: var(--secondary);
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+}
+
+/* ===== FORMULARIOS ===== */
+.form-group {
+    margin-bottom: 1.2rem;
+    text-align: left;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.7rem 0.9rem;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background-color: rgba(255, 255, 255, 0.05);
+    color: var(--light);
+    font-size: 0.9rem;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+}
+
+.unlimited-numbers {
+    background: rgba(153, 69, 255, 0.1);
+    border: 1px solid var(--primary);
+    border-radius: 10px;
+    padding: 1rem;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+}
+
+.unlimited-numbers h4 {
+    color: var(--primary);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    font-size: 1rem;
+}
+
+.unlimited-numbers h4:before {
+    content: "∞";
+    margin-right: 6px;
+    font-weight: bold;
+}
+
+.image-preview {
+    width: 100%;
+    height: 150px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1rem;
+    overflow: hidden;
+}
+
+.image-preview img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.image-preview .emoji-preview {
+    font-size: 3rem;
+}
+
+/* ===== FEATURES ===== */
+.features {
+    padding: 40px 0;
+}
+
+.section-title {
+    text-align: center;
+    margin-bottom: 2rem;
+    font-size: 1.8rem;
+    padding: 0 10px;
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+}
+
+.feature-card {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: transform 0.3s;
+    border: 1px solid rgba(153, 69, 255, 0.1);
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--primary);
+}
+
+.feature-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    color: var(--secondary);
+}
+
+.feature-card h3 {
+    margin-bottom: 1rem;
+    font-size: 1.3rem;
+}
+
+/* ===== SORTEOS ===== */
+.raffles {
+    padding: 40px 0;
+}
+
+.raffles-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+}
+
+.raffle-card {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    overflow: hidden;
+    border: 1px solid rgba(153, 69, 255, 0.1);
+    transition: transform 0.3s;
+}
+
+.raffle-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--primary);
+}
+
+.raffle-image {
+    height: 180px;
+    background-color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    overflow: hidden;
+}
+
+.raffle-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.raffle-content {
+    padding: 1.2rem;
+}
+
+.raffle-title {
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.raffle-price {
+    color: var(--secondary);
+    font-weight: bold;
+    margin-bottom: 1rem;
+    font-size: 1rem;
+}
+
+.raffle-info {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    font-size: 0.8rem;
+    color: var(--gray);
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.progress-bar {
+    height: 6px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    overflow: hidden;
+}
+
+.progress {
+    height: 100%;
+    background: linear-gradient(45deg, var(--primary), var(--secondary));
+    border-radius: 4px;
+}
+
+/* ===== SKELETON LOADERS ===== */
+.skeleton {
+    background: linear-gradient(90deg, #2a2a2a 25%, #333 50%, #2a2a2a 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    border-radius: 4px;
+}
+
+.skeleton-raffle {
+    height: 300px;
+    margin-bottom: 1.5rem;
+    border-radius: 15px;
+    padding: 1.2rem;
+}
+
+.skeleton-text {
+    height: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.skeleton-text--short {
+    width: 60%;
+}
+
+@keyframes loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
     }
 }
 
-// ===== MÓDULO FIREBASE =====
-async function initializeFirebase() {
-    try {
-        firebase.initializeApp(FIREBASE_CONFIG);
-        window.db = firebase.firestore();
-        window.analytics = firebase.analytics();
-        console.log('✅ Firebase inicializado correctamente');
-    } catch (error) {
-        console.error('❌ Error inicializando Firebase:', error);
-        throw error;
+/* ===== TRANSACTION STATUS ===== */
+.transaction-status {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 1rem;
+    margin: 1rem 0;
+    border-left: 4px solid var(--info);
+    font-size: 0.9rem;
+}
+
+.transaction-success {
+    border-left-color: var(--success);
+}
+
+.transaction-error {
+    border-left-color: var(--danger);
+}
+
+/* ===== MODAL GENERAL ===== */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+    padding: 15px;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    background-color: var(--dark);
+    border-radius: 15px;
+    width: 100%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 1.5rem;
+    border: 1px solid var(--primary);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.2rem;
+}
+
+.modal-title {
+    font-size: 1.3rem;
+    color: var(--secondary);
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    color: var(--light);
+    font-size: 1.5rem;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+/* ===== NUMBERS SELECTION ===== */
+.numbers-container {
+    max-height: 300px;
+    overflow-y: auto;
+    margin: 1.2rem 0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 1rem;
+}
+
+.numbers-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+}
+
+.number-btn {
+    width: 100%;
+    aspect-ratio: 1/1;
+    border: 2px solid var(--primary);
+    background: transparent;
+    color: var(--light);
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    transition: all 0.3s;
+    font-size: 0.8rem;
+    touch-action: manipulation;
+}
+
+.number-btn:hover {
+    background: rgba(153, 69, 255, 0.2);
+}
+
+.number-btn.selected {
+    background: var(--primary);
+    color: var(--dark);
+}
+
+.number-btn.sold {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: white;
+    cursor: not-allowed;
+}
+
+.selected-numbers {
+    background: rgba(153, 69, 255, 0.1);
+    border-radius: 10px;
+    padding: 1rem;
+    margin: 1rem 0;
+}
+
+.selected-numbers h4 {
+    margin-bottom: 0.5rem;
+    color: var(--secondary);
+    font-size: 1rem;
+}
+
+.selected-numbers-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 40px;
+    max-height: 80px;
+    overflow-y: auto;
+}
+
+.selected-number-tag {
+    background: var(--primary);
+    color: var(--dark);
+    padding: 0.3rem 0.6rem;
+    border-radius: 15px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    font-size: 0.8rem;
+}
+
+.payment-info {
+    background: rgba(153, 69, 255, 0.1);
+    border-radius: 10px;
+    padding: 1.2rem;
+    margin: 1.2rem 0;
+}
+
+.payment-details {
+    display: flex;
+    justify-content: space-between;
+    margin: 0.8rem 0;
+    font-size: 0.9rem;
+}
+
+.payment-amount {
+    font-size: 1.3rem;
+    color: var(--secondary);
+    font-weight: bold;
+}
+
+/* ===== PAGINATION ===== */
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin: 1rem 0;
+    flex-wrap: wrap;
+}
+
+.page-btn {
+    padding: 0.4rem 0.8rem;
+    border: 1px solid var(--primary);
+    background: transparent;
+    color: var(--light);
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    touch-action: manipulation;
+}
+
+.page-btn.active {
+    background: var(--primary);
+    color: var(--dark);
+}
+
+.page-info {
+    text-align: center;
+    color: var(--gray);
+    margin: 0.5rem 0;
+    font-size: 0.9rem;
+}
+
+/* ===== CLAIM PRIZE MODAL ===== */
+.claim-prize-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    z-index: 3000;
+    align-items: center;
+    justify-content: center;
+    padding: 15px;
+}
+
+.claim-prize-modal.active {
+    display: flex;
+}
+
+.claim-prize-content {
+    background-color: var(--dark);
+    border-radius: 15px;
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 1.5rem;
+    border: 2px solid var(--success);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.winner-badge {
+    background: linear-gradient(45deg, var(--success), var(--secondary));
+    color: var(--dark);
+    padding: 0.8rem;
+    border-radius: 10px;
+    text-align: center;
+    margin-bottom: 1.2rem;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.prize-details {
+    background: rgba(20, 241, 149, 0.1);
+    border: 1px solid var(--secondary);
+    border-radius: 10px;
+    padding: 1.2rem;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+}
+
+.contact-form {
+    background: rgba(153, 69, 255, 0.1);
+    border-radius: 10px;
+    padding: 1.2rem;
+    margin: 1.2rem 0;
+    border: 1px solid var(--primary);
+}
+
+.contact-form h3 {
+    color: var(--secondary);
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+}
+
+/* ===== USER ALERTS ===== */
+.user-alert {
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    right: 15px;
+    background: var(--dark);
+    border: 1px solid var(--primary);
+    border-radius: 10px;
+    padding: 1rem;
+    z-index: 4000;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    display: none;
+}
+
+.user-alert.success {
+    border-color: var(--success);
+}
+
+.user-alert.error {
+    border-color: var(--danger);
+}
+
+.user-alert.warning {
+    border-color: var(--warning);
+}
+
+.user-alert.info {
+    border-color: var(--info);
+}
+
+.alert-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.alert-icon {
+    font-size: 1.3rem;
+    flex-shrink: 0;
+}
+
+.alert-message {
+    flex: 1;
+    font-size: 0.9rem;
+}
+
+.close-alert {
+    background: none;
+    border: none;
+    color: var(--light);
+    font-size: 1.2rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    touch-action: manipulation;
+}
+
+/* ===== WINNERS ARCHIVE ===== */
+.winners-archive {
+    padding: 40px 0;
+    background: rgba(20, 241, 149, 0.05);
+    border-top: 1px solid var(--secondary);
+    border-bottom: 1px solid var(--secondary);
+}
+
+.winners-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.winner-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 1rem;
+    border: 1px solid rgba(20, 241, 149, 0.3);
+}
+
+.winner-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.winner-prize {
+    color: var(--secondary);
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.winner-date {
+    color: var(--gray);
+    font-size: 0.8rem;
+}
+
+.winner-details {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.winner-wallet {
+    font-family: monospace;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.3rem 0.6rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+}
+
+/* ===== FAQ SECTION ===== */
+.faq-section {
+    padding: 40px 0;
+    background: rgba(153, 69, 255, 0.05);
+}
+
+.faq-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.faq-item {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    overflow: hidden;
+    border: 1px solid rgba(153, 69, 255, 0.1);
+}
+
+.faq-question {
+    padding: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.3s;
+}
+
+.faq-question:hover {
+    background: rgba(153, 69, 255, 0.1);
+}
+
+.faq-answer {
+    padding: 0 1.2rem;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+}
+
+.faq-answer.active {
+    padding: 0 1.2rem 1.2rem;
+    max-height: 500px;
+}
+
+.faq-toggle {
+    font-size: 1.2rem;
+    transition: transform 0.3s;
+}
+
+.faq-toggle.active {
+    transform: rotate(45deg);
+}
+
+/* ===== FORM VALIDATION ===== */
+.form-validation {
+    color: var(--danger);
+    font-size: 0.8rem;
+    margin-top: 0.3rem;
+    display: none;
+}
+
+.form-validation.show {
+    display: block;
+}
+
+.form-control.error {
+    border-color: var(--danger);
+}
+
+.form-control.success {
+    border-color: var(--success);
+}
+
+/* ===== WINNERS ADMIN SECTION ===== */
+.winners-admin-section {
+    margin-top: 2rem;
+    background: rgba(20, 241, 149, 0.05);
+    border: 1px solid var(--secondary);
+    border-radius: 10px;
+    padding: 1.5rem;
+}
+
+.winners-admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.winners-filters {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+.winners-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    font-size: 0.9rem;
+}
+
+.winners-table th {
+    background: rgba(153, 69, 255, 0.2);
+    color: var(--primary);
+    padding: 0.8rem;
+    text-align: left;
+    border-bottom: 2px solid var(--primary);
+}
+
+.winners-table td {
+    padding: 0.8rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.winners-table tr:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.winner-contact-info {
+    max-width: 200px;
+    word-break: break-word;
+}
+
+.winner-status-badge {
+    padding: 0.3rem 0.6rem;
+    border-radius: 15px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    text-align: center;
+    display: inline-block;
+}
+
+.status-claimed {
+    background: rgba(20, 241, 149, 0.2);
+    color: var(--secondary);
+    border: 1px solid var(--secondary);
+}
+
+.status-pending {
+    background: rgba(255, 193, 7, 0.2);
+    color: var(--warning);
+    border: 1px solid var(--warning);
+}
+
+.status-shipped {
+    background: rgba(0, 123, 255, 0.2);
+    color: var(--info);
+    border: 1px solid var(--info);
+}
+
+.status-delivered {
+    background: rgba(40, 167, 69, 0.2);
+    color: var(--success);
+    border: 1px solid var(--success);
+}
+
+.no-winners-message {
+    text-align: center;
+    padding: 2rem;
+    color: var(--gray);
+}
+
+.winner-actions {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+/* ===== FOOTER ===== */
+footer {
+    padding: 40px 0 20px;
+    background-color: rgba(0, 0, 0, 0.5);
+    text-align: center;
+}
+
+.footer-logo {
+    margin-bottom: 1rem;
+}
+
+.footer-logo svg {
+    width: 50px;
+    height: 50px;
+    opacity: 0.8;
+}
+
+.footer-links {
+    display: flex;
+    justify-content: center;
+    list-style: none;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.footer-links li {
+    margin: 0 0.5rem;
+}
+
+.footer-links a {
+    color: var(--gray);
+    text-decoration: none;
+    transition: color 0.3s;
+    font-size: 0.9rem;
+}
+
+.footer-links a:hover {
+    color: var(--secondary);
+}
+
+.copyright {
+    color: var(--gray);
+    font-size: 0.8rem;
+    padding: 0 10px;
+}
+
+/* ===== MEDIA QUERIES ===== */
+@media (min-width: 768px) {
+    body {
+        padding-top: 90px;
+    }
+
+    .container {
+        width: 90%;
+        padding: 0 15px;
+    }
+
+    .navbar {
+        padding: 1rem 0;
+        flex-wrap: nowrap;
+    }
+
+    .logo-icon {
+        width: 40px;
+        height: 40px;
+    }
+
+    .logo-main {
+        font-size: 1.5rem;
+    }
+
+    .logo-sub {
+        font-size: 0.7rem;
+    }
+
+    .nav-links {
+        margin: 0;
+    }
+
+    .nav-links li {
+        margin-left: 1.5rem;
+    }
+
+    .nav-links a {
+        font-size: 1rem;
+        padding: 0.5rem 1rem;
+    }
+
+    .wallet-connector {
+        margin: 0;
+    }
+
+    .hero {
+        padding: 80px 0 60px;
+    }
+
+    .hero h1 {
+        font-size: 3rem;
+    }
+
+    .hero-logo svg {
+        width: 140px;
+        height: 140px;
+    }
+
+    .hero p {
+        font-size: 1.2rem;
+        max-width: 700px;
+    }
+
+    .trust-badges {
+        gap: 15px;
+    }
+
+    .trust-badge {
+        padding: 0.8rem 1.5rem;
+        font-size: 0.9rem;
+    }
+
+    .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .raffles-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .form-row {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .numbers-grid {
+        grid-template-columns: repeat(8, 1fr);
+        gap: 8px;
+    }
+
+    .admin-header {
+        flex-direction: row;
+    }
+
+    .features, .raffles, .admin-panel, .winners-archive, .faq-section {
+        padding: 60px 0;
+    }
+
+    .winner-details {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .winners-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .winners-admin-header {
+        flex-direction: row;
     }
 }
 
-// ===== MÓDULO DE DATOS =====
-async function loadInitialData() {
-    showSkeletonLoaders();
+@media (min-width: 1024px) {
+    .features-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .raffles-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .numbers-grid {
+        grid-template-columns: repeat(10, 1fr);
+    }
+
+    .user-alert {
+        left: auto;
+        right: 20px;
+        max-width: 400px;
+    }
+
+    .winners-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .winner-contact-info {
+        max-width: 250px;
+    }
+}
+
+@media (max-width: 768px) {
+    .winners-table {
+        display: block;
+        overflow-x: auto;
+    }
     
-    try {
-        await Promise.all([
-            loadRafflesFromFirebase(),
-            loadWinnersFromFirebase()
-        ]);
-        
-        hideSkeletonLoaders();
-        renderRaffles();
-        renderWinnersArchive();
-    } catch (error) {
-        console.error('Error cargando datos iniciales:', error);
-        hideSkeletonLoaders();
-        showUserAlert('Error cargando datos', 'error');
-    }
-}
-
-async function loadRafflesFromFirebase() {
-    if (!window.db) {
-        console.error('❌ Firebase no disponible');
-        appState.raffles = [];
-        return;
-    }
-
-    try {
-        const snapshot = await db.collection('raffles').get();
-        
-        if (!snapshot.empty) {
-            appState.raffles = [];
-            snapshot.forEach(doc => {
-                const raffleData = doc.data();
-                // Asegurar que todos los campos necesarios existan
-                if (!raffleData.soldNumbers) raffleData.soldNumbers = [];
-                if (!raffleData.winner) raffleData.winner = null;
-                if (raffleData.prizeClaimed === undefined) raffleData.prizeClaimed = false;
-                if (!raffleData.numberOwners) raffleData.numberOwners = {};
-                if (raffleData.completed === undefined) raffleData.completed = false;
-                if (!raffleData.shippingStatus) raffleData.shippingStatus = 'pending';
-                
-                appState.raffles.push(raffleData);
-            });
-            console.log('✅ Sorteos cargados desde Firebase:', appState.raffles.length);
-        } else {
-            console.log('📝 No hay sorteos en Firebase');
-            appState.raffles = [];
-        }
-    } catch (error) {
-        console.error('❌ Error cargando desde Firebase:', error);
-        appState.raffles = [];
-    }
-}
-
-async function loadWinnersFromFirebase() {
-    if (!window.db) {
-        console.error('❌ Firebase no disponible');
-        appState.winners = [];
-        return;
-    }
-
-    try {
-        const snapshot = await db.collection('winners').orderBy('winnerDate', 'desc').get();
-        
-        if (!snapshot.empty) {
-            appState.winners = [];
-            snapshot.forEach(doc => {
-                appState.winners.push(doc.data());
-            });
-            console.log('✅ Ganadores cargados desde Firebase:', appState.winners.length);
-        } else {
-            console.log('📝 No hay ganadores en Firebase');
-            appState.winners = [];
-        }
-    } catch (error) {
-        console.error('❌ Error cargando ganadores desde Firebase:', error);
-        appState.winners = [];
-    }
-}
-
-async function saveRafflesToFirebase() {
-    if (!window.db) {
-        console.error('❌ Firebase no disponible');
-        return;
-    }
-
-    try {
-        for (const raffle of appState.raffles) {
-            await db.collection('raffles').doc(raffle.id).set({
-                ...raffle,
-                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-            });
-        }
-        console.log('✅ Sorteos guardados en Firebase');
-    } catch (error) {
-        console.error('❌ Error guardando en Firebase:', error);
-        showUserAlert('Error guardando datos en la nube', 'error');
-    }
-}
-
-// ===== MÓDULO DE UI =====
-function showSkeletonLoaders() {
-    const rafflesContainer = document.getElementById('raffles-container');
-    const winnersContainer = document.getElementById('winners-container');
-    
-    if (rafflesContainer) {
-        rafflesContainer.innerHTML = `
-            <div class="skeleton-raffle"></div>
-            <div class="skeleton-raffle"></div>
-            <div class="skeleton-raffle"></div>
-        `;
+    .winners-table th,
+    .winners-table td {
+        padding: 0.5rem;
+        font-size: 0.8rem;
     }
     
-    if (winnersContainer) {
-        winnersContainer.innerHTML = `
-            <div class="skeleton skeleton-text" style="height: 120px; margin-bottom: 1rem;"></div>
-            <div class="skeleton skeleton-text" style="height: 120px; margin-bottom: 1rem;"></div>
-            <div class="skeleton skeleton-text" style="height: 120px; margin-bottom: 1rem;"></div>
-        `;
+    .winner-contact-info {
+        max-width: 150px;
     }
 }
-
-function hideSkeletonLoaders() {
-    // Los skeletons se reemplazarán automáticamente cuando se rendericen los datos reales
-}
-
-function showUserAlert(message, type = 'info', duration = 5000) {
-    const alert = document.getElementById('user-alert');
-    const alertIcon = document.getElementById('alert-icon');
-    const alertMessage = document.getElementById('alert-message');
-
-    alert.className = `user-alert ${type}`;
-
-    switch(type) {
-        case 'success':
-            alertIcon.textContent = '✅';
-            break;
-        case 'error':
-            alertIcon.textContent = '❌';
-            break;
-        case 'warning':
-            alertIcon.textContent = '⚠️';
-            break;
-        default:
-            alertIcon.textContent = 'ℹ️';
-    }
-
-    alertMessage.textContent = message;
-    alert.style.display = 'block';
-
-    if (duration > 0) {
-        setTimeout(() => {
-            hideUserAlert();
-        }, duration);
-    }
-}
-
-function hideUserAlert() {
-    document.getElementById('user-alert').style.display = 'none';
-}
-
-// ===== MÓDULO DE BLOCKCHAIN =====
-async function connectToBlockchain() {
-    try {
-        window.connection = new solanaWeb3.Connection(
-            solanaWeb3.clusterApiUrl(network),
-            'confirmed'
-        );
-        
-        const version = await connection.getVersion();
-        console.log('✅ Conectado a Solana Testnet:', version);
-        
-        // Actualizar estado de conexión
-        document.getElementById('real-connection-status').innerHTML =
-            `<strong>Estado Blockchain:</strong> ✅ Conectado a Solana Testnet<br>
-             <small>Version: ${version['solana-core']}</small>`;
-             
-        return true;
-    } catch (error) {
-        console.error('Error conectando a Solana:', error);
-        document.getElementById('real-connection-status').innerHTML =
-            '<strong>Estado Blockchain:</strong> ❌ Error conectando a Solana Testnet';
-        return false;
-    }
-}
-
-async function connectRealWallet(walletType) {
-    try {
-        let provider;
-
-        if (walletType === 'phantom') {
-            provider = window.solana;
-        } else if (walletType === 'solflare') {
-            provider = window.solflare;
-        } else {
-            throw new Error('Wallet no soportada');
-        }
-
-        if (!provider) {
-            showUserAlert(
-                `${walletType} no está instalada. Por favor, instálala desde ${walletType === 'phantom' ? 'phantom.app' : 'solflare.com'} para continuar.`,
-                'warning',
-                8000
-            );
-            return false;
-        }
-
-        const response = await provider.connect();
-        const publicKey = provider.publicKey;
-
-        const balance = await connection.getBalance(publicKey);
-        const balanceInSOL = balance / solanaWeb3.LAMPORTS_PER_SOL;
-
-        appState.currentWallet = {
-            publicKey: publicKey,
-            provider: provider,
-            balance: balanceInSOL
-        };
-
-        updateWalletUI(publicKey.toString(), balanceInSOL);
-        checkIfAdmin(publicKey.toString());
-
-        document.getElementById('wallet-modal').classList.remove('active');
-
-        showUserAlert(
-            `✅ ${walletType} conectada correctamente a VeriRifa-Sol`,
-            'success',
-            5000
-        );
-
-        return true;
-
-    } catch (error) {
-        console.error('Error conectando wallet:', error);
-        showUserAlert(`❌ Error conectando wallet: ${error.message}`, 'error');
-        return false;
-    }
-}
-
-function updateWalletUI(publicKey, balance) {
-    const shortAddress = `${publicKey.substring(0, 6)}...${publicKey.substring(publicKey.length - 4)}`;
-
-    document.getElementById('connected-wallet-address').textContent = shortAddress;
-    document.getElementById('connected-wallet-address').style.display = 'block';
-    document.getElementById('wallet-balance').textContent = `${balance.toFixed(4)} SOL`;
-    document.getElementById('wallet-balance').style.display = 'block';
-    document.getElementById('connect-wallet-btn').innerHTML = '<span>✅ Conectado</span>';
-    document.getElementById('connect-wallet-btn').className = 'btn btn-success';
-    document.getElementById('network-indicator').textContent = '🟢 Solana Testnet';
-    document.getElementById('network-indicator').style.background = 'rgba(20, 241, 149, 0.2)';
-    document.getElementById('disconnect-wallet-btn').style.display = 'block';
-    document.getElementById('winner-info-btn').style.display = 'block';
-
-    document.getElementById('connection-status').innerHTML = '<strong>Estado Wallet:</strong> ✅ Conectada a VeriRifa-Sol';
-}
-
-function checkIfAdmin(publicKey) {
-    appState.isAdmin = (publicKey === ADMIN_WALLET_ADDRESS);
-
-    if (appState.isAdmin) {
-        document.getElementById('admin-menu-item').classList.add('visible');
-        showUserAlert('✅ Modo verificador activado', 'success');
-    } else {
-        document.getElementById('admin-menu-item').classList.remove('visible');
-        document.getElementById('admin-panel').classList.remove('active');
-    }
-}
-
-function disconnectWallet() {
-    if (appState.currentWallet.provider) {
-        appState.currentWallet.provider.disconnect();
-    }
-
-    appState.currentWallet = {
-        publicKey: null,
-        provider: null,
-        balance: 0
-    };
-
-    appState.isConnected = false;
-    appState.isAdmin = false;
-
-    document.getElementById('connected-wallet-address').style.display = 'none';
-    document.getElementById('wallet-balance').style.display = 'none';
-    document.getElementById('connect-wallet-btn').innerHTML = '<span>👛 Conectar Wallet</span>';
-    document.getElementById('connect-wallet-btn').className = 'btn';
-    document.getElementById('network-indicator').textContent = '🔴 Desconectado';
-    document.getElementById('network-indicator').style.background = 'rgba(153, 69, 255, 0.2)';
-    document.getElementById('disconnect-wallet-btn').style.display = 'none';
-    document.getElementById('winner-info-btn').style.display = 'none';
-    document.getElementById('admin-menu-item').classList.remove('visible');
-    document.getElementById('admin-panel').classList.remove('active');
-
-    document.getElementById('connection-status').innerHTML = '<strong>Estado Wallet:</strong> Desconectado';
-
-    showUserAlert('🔌 Wallet desconectada', 'info');
-}
-
-// ===== RENDERIZADO DE SORTEOS =====
-function renderRaffles() {
-    const container = document.getElementById('raffles-container');
-    if (!container) return;
-
-    container.innerHTML = '';
-
-    const activeRaffles = appState.raffles.filter(raffle => !raffle.completed);
-    
-    if (activeRaffles.length === 0) {
-        container.innerHTML = `
-            <div style="text-align: center; color: var(--gray); padding: 3rem;">
-                <h3>📝 No hay sorteos activos</h3>
-                <p>Conecta tu wallet verificada para crear el primer sorteo</p>
-            </div>
-        `;
-        return;
-    }
-
-    activeRaffles.forEach(raffle => {
-        const raffleCard = document.createElement('div');
-        raffleCard.className = 'raffle-card';
-        
-        const progress = raffle.soldNumbers.length;
-        const total = raffle.totalNumbers;
-        const progressPercent = total > 0 ? (progress / total) * 100 : 0;
-        
-        const isUserWinner = raffle.winner && appState.currentWallet.publicKey && 
-                            raffle.winner.wallet === appState.currentWallet.publicKey.toString();
-        
-        let actionButton = '';
-        
-        const allNumbersSold = raffle.soldNumbers.length >= raffle.totalNumbers;
-        
-        if (raffle.winner) {
-            if (isUserWinner) {
-                if (raffle.prizeClaimed) {
-                    const shippingStatus = raffle.shippingStatus || 'pending';
-                    const statusText = getShippingStatusText(shippingStatus);
-                    let statusColor = 'var(--success)';
-                    
-                    switch(shippingStatus) {
-                        case 'pending': statusColor = 'var(--warning)'; break;
-                        case 'claimed': statusColor = 'var(--info)'; break;
-                        case 'shipped': statusColor = 'var(--primary)'; break;
-                        case 'delivered': statusColor = 'var(--success)'; break;
-                    }
-                    
-                    actionButton = `
-                        <button class="btn" style="width: 100%; background: ${statusColor}; cursor: not-allowed;" disabled>
-                            ${shippingStatus === 'delivered' ? '✅' : '📦'} ${statusText}
-                        </button>
-                    `;
-                } else {
-                    actionButton = `
-                        <button class="btn btn-success claim-prize-btn" data-raffle="${raffle.id}" style="width: 100%;">
-                            🎉 Reclamar Premio
-                        </button>
-                    `;
-                }
-            } else {
-                actionButton = `
-                    <button class="btn" style="width: 100%; background: var(--gray); cursor: not-allowed;" disabled>
-                        ❌ No Ganaste
-                    </button>
-                `;
-            }
-        } else if (raffle.isSelectingWinner) {
-            actionButton = `
-                <button class="btn" style="width: 100%; background: var(--warning); cursor: not-allowed;" disabled>
-                    ⏳ Seleccionando Ganador...
-                </button>
-            `;
-        } else {
-            if (appState.isAdmin) {
-                if (allNumbersSold) {
-                    actionButton = `
-                        <button class="btn btn-warning select-winner-btn" data-raffle="${raffle.id}" style="width: 100%;">
-                            🎰 Seleccionar Ganador
-                        </button>
-                    `;
-                } else {
-                    const remainingNumbers = raffle.totalNumbers - raffle.soldNumbers.length;
-                    actionButton = `
-                        <button class="btn btn-disabled" style="width: 100%;" disabled>
-                            ⏳ Esperando venta (${remainingNumbers} números restantes)
-                        </button>
-                    `;
-                }
-            } else {
-                if (allNumbersSold) {
-                    actionButton = `
-                        <button class="btn btn-disabled" style="width: 100%;" disabled>
-                            🔒 Todos los números vendidos
-                        </button>
-                    `;
-                } else {
-                    actionButton = `
-                        <button class="btn participate-btn" data-raffle="${raffle.id}" style="width: 100%;">
-                            🎫 Participar (${raffle.price} SOL)
-                        </button>
-                    `;
-                }
-            }
-        }
-
-        raffleCard.innerHTML = `
-            <div class="raffle-image">
-                ${raffle.image.startsWith('http') ? 
-                    `<img src="${raffle.image}" alt="${raffle.name}" onerror="this.parentElement.innerHTML='${raffle.image.includes('🎮') ? '🎮' : '🎁'}'">` : 
-                    `<div style="font-size: 3rem;">${raffle.image}</div>`
-                }
-            </div>
-            <div class="raffle-content">
-                <h3 class="raffle-title">${raffle.name}</h3>
-                <div class="raffle-price">${raffle.price} SOL por número</div>
-                <div class="raffle-info">
-                    <span>🎯 Premio: ${raffle.prize}</span>
-                    <span>🔢 ${progress}/${total} números</span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress" style="width: ${progressPercent}%"></div>
-                </div>
-                <div class="raffle-info">
-                    <span>🏆 Ganador: ${raffle.winner ? 'Sí' : 'No'}</span>
-                    <span>${allNumbersSold ? '🔒 Completado' : '🟢 Disponible'}</span>
-                </div>
-                <div>
-                    ${actionButton}
-                </div>
-            </div>
-        `;
-
-        container.appendChild(raffleCard);
-    });
-
-    setupRaffleEventListeners();
-}
-
-function setupRaffleEventListeners() {
-    document.querySelectorAll('.participate-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            if (!appState.currentWallet.publicKey) {
-                showUserAlert('🔗 Conecta tu wallet primero para participar', 'warning');
-                document.getElementById('wallet-modal').classList.add('active');
-                return;
-            }
-            openNumberSelectionModal(this.getAttribute('data-raffle'));
-        });
-    });
-
-    document.querySelectorAll('.select-winner-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            selectWinner(this.getAttribute('data-raffle'));
-        });
-    });
-
-    document.querySelectorAll('.claim-prize-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            openClaimPrizeModal(this.getAttribute('data-raffle'));
-        });
-    });
-}
-
-// ===== RENDERIZADO DE GANADORES =====
-function renderWinnersArchive() {
-    const winnersContainer = document.getElementById('winners-container');
-    if (!winnersContainer) return;
-
-    winnersContainer.innerHTML = '';
-
-    if (appState.winners.length === 0) {
-        winnersContainer.innerHTML = `
-            <div style="text-align: center; color: var(--gray); padding: 2rem;">
-                <h3>📝 Aún no hay ganadores</h3>
-                <p>Los ganadores aparecerán aquí una vez que se realicen los sorteos</p>
-            </div>
-        `;
-        return;
-    }
-
-    appState.winners.forEach(winner => {
-        const winnerCard = document.createElement('div');
-        winnerCard.className = 'winner-card';
-        
-        const winnerDate = new Date(winner.winnerDate).toLocaleDateString('es-ES');
-        const shortWallet = `${winner.winnerWallet.substring(0, 8)}...${winner.winnerWallet.substring(winner.winnerWallet.length - 4)}`;
-
-        winnerCard.innerHTML = `
-            <div class="winner-header">
-                <div class="winner-prize">${winner.prize}</div>
-                <div class="winner-date">${winnerDate}</div>
-            </div>
-            <div class="winner-details">
-                <div><strong>Sorteo:</strong> ${winner.raffleName}</div>
-                <div><strong>Número ganador:</strong> ${winner.winningNumber}</div>
-                <div><strong>Wallet:</strong> <span class="winner-wallet">${shortWallet}</span></div>
-                ${winner.winnerInfo ? `<div><strong>Ganador:</strong> ${winner.winnerInfo.name}</div>` : ''}
-            </div>
-        `;
-
-        winnersContainer.appendChild(winnerCard);
-    });
-}
-
-// ===== FUNCIONES AUXILIARES =====
-function getShippingStatusText(status) {
-    switch(status) {
-        case 'pending': return 'Pendiente';
-        case 'claimed': return 'Reclamado';
-        case 'shipped': return 'Enviado';
-        case 'delivered': return 'Entregado';
-        default: return 'Pendiente';
-    }
-}
-
-// ===== SETUP DE EVENT LISTENERS =====
-function setupEventListeners() {
-    // Wallet Modal
-    document.getElementById('connect-wallet-btn').addEventListener('click', function() {
-        document.getElementById('wallet-modal').classList.add('active');
-    });
-
-    document.getElementById('close-wallet-modal').addEventListener('click', function() {
-        document.getElementById('wallet-modal').classList.remove('active');
-    });
-
-    document.getElementById('connect-phantom-real').addEventListener('click', function() {
-        connectRealWallet('phantom');
-    });
-
-    document.getElementById('connect-solflare-real').addEventListener('click', function() {
-        connectRealWallet('solflare');
-    });
-
-    document.getElementById('disconnect-wallet-btn').addEventListener('click', disconnectWallet);
-
-    // Admin Panel
-    document.getElementById('admin-panel-link').addEventListener('click', function(e) {
-        e.preventDefault();
-        if (appState.isAdmin) {
-            document.getElementById('admin-panel').classList.add('active');
-            window.scrollTo({ top: document.getElementById('admin-panel').offsetTop - 100, behavior: 'smooth' });
-        } else {
-            showUserAlert('❌ Solo el verificador puede acceder al panel', 'error');
-        }
-    });
-
-    document.getElementById('close-admin-panel').addEventListener('click', function() {
-        document.getElementById('admin-panel').classList.remove('active');
-    });
-
-    // FAQ
-    document.querySelectorAll('.faq-question').forEach(question => {
-        question.addEventListener('click', function() {
-            const answer = this.nextElementSibling;
-            const toggle = this.querySelector('.faq-toggle');
-            
-            document.querySelectorAll('.faq-answer').forEach(ans => {
-                if (ans !== answer) {
-                    ans.classList.remove('active');
-                    ans.previousElementSibling.querySelector('.faq-toggle').classList.remove('active');
-                }
-            });
-            
-            answer.classList.toggle('active');
-            toggle.classList.toggle('active');
-        });
-    });
-
-    // Cerrar alertas
-    document.getElementById('close-alert').addEventListener('click', hideUserAlert);
-
-    // Cerrar modales al hacer clic fuera
-    window.addEventListener('click', function(event) {
-        if (event.target === document.getElementById('wallet-modal')) {
-            document.getElementById('wallet-modal').classList.remove('active');
-        }
-    });
-}
-
-// Nota: Las funciones más complejas como selección de números, procesamiento de pagos, etc.
-// se han simplificado para este ejemplo. En una implementación completa, incluirías toda la lógica.
