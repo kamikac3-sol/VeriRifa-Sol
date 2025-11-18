@@ -37,10 +37,9 @@ async function initializeApp() {
     try {
         console.log('🚀 Inicializando VeriRifa-Sol...');
         
-        // Primero configurar todos los event listeners
+        // Configurar todos los event listeners primero
         setupEventListeners();
         setupAdditionalEventListeners();
-        setupCreateRaffleForm();
         
         // Luego inicializar Firebase
         await initializeFirebase();
@@ -199,30 +198,33 @@ async function loadWinnersFromFirebase() {
 // ===== CREACIÓN DE SORTEOS - VERSIÓN CORREGIDA =====
 function setupCreateRaffleForm() {
     const createRaffleBtn = document.getElementById('create-raffle-btn');
-    const createRaffleForm = document.getElementById('create-raffle-form');
     
+    if (!createRaffleBtn) {
+        console.error('❌ Botón de crear sorteo no encontrado');
+        return;
+    }
+
     console.log('🔧 Configurando formulario de crear sorteo...');
-    console.log('Botón encontrado:', !!createRaffleBtn);
-    console.log('Formulario encontrado:', !!createRaffleForm);
+
+    // Remover cualquier event listener existente
+    const newCreateRaffleBtn = createRaffleBtn.cloneNode(true);
+    createRaffleBtn.parentNode.replaceChild(newCreateRaffleBtn, createRaffleBtn);
+
+    // Obtener referencia al nuevo botón
+    const freshCreateRaffleBtn = document.getElementById('create-raffle-btn');
     
-    if (createRaffleBtn) {
-        createRaffleBtn.addEventListener('click', handleCreateRaffle);
-        console.log('✅ Event listener agregado al botón');
-    }
-    
-    // También prevenir el submit del formulario por si acaso
-    if (createRaffleForm) {
-        createRaffleForm.addEventListener('submit', function(e) {
-            console.log('🚫 Previniendo submit del formulario');
-            e.preventDefault();
-            e.stopPropagation();
-            return false;
-        });
-    }
+    freshCreateRaffleBtn.addEventListener('click', function(e) {
+        console.log('🎯 Botón de crear sorteo clickeado');
+        e.preventDefault();
+        e.stopPropagation();
+        handleCreateRaffle();
+    });
+
+    console.log('✅ Event listener agregado al botón de crear sorteo');
 }
 
 function handleCreateRaffle() {
-    console.log('🎯 Botón de crear sorteo clickeado');
+    console.log('🔄 Ejecutando handleCreateRaffle...');
     
     if (!appState.isAdmin) {
         showUserAlert('❌ Solo el verificador puede crear sorteos', 'error');
@@ -1480,7 +1482,7 @@ function setupAdditionalEventListeners() {
         filterWinnersTable();
     });
 
-    // Configurar formulario de crear sorteo
+    // Configurar formulario de crear sorteo - SOLO UNA VEZ
     setupCreateRaffleForm();
 }
 
@@ -1502,6 +1504,3 @@ function filterWinnersTable() {
         row.style.display = (matchesSearch && matchesStatus) ? '' : 'none';
     });
 }
-
-// Inicializar cuando se carga la página
-initializeApp();
