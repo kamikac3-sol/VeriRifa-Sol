@@ -196,43 +196,70 @@ async function loadWinnersFromFirebase() {
     }
 }
 
-// ===== CREACIÓN DE SORTEOS =====
+// ===== CREACIÓN DE SORTEOS - VERSIÓN CORREGIDA =====
 function setupCreateRaffleForm() {
+    const createRaffleBtn = document.getElementById('create-raffle-btn');
     const createRaffleForm = document.getElementById('create-raffle-form');
+    
+    console.log('🔧 Configurando formulario de crear sorteo...');
+    console.log('Botón encontrado:', !!createRaffleBtn);
+    console.log('Formulario encontrado:', !!createRaffleForm);
+    
+    if (createRaffleBtn) {
+        createRaffleBtn.addEventListener('click', handleCreateRaffle);
+        console.log('✅ Event listener agregado al botón');
+    }
+    
+    // También prevenir el submit del formulario por si acaso
     if (createRaffleForm) {
-        createRaffleForm.addEventListener('submit', async function(e) {
-            e.preventDefault(); // Esto evita que la página se recargue
-            console.log('📝 Formulario de crear sorteo enviado');
-            
-            if (!appState.isAdmin) {
-                showUserAlert('❌ Solo el verificador puede crear sorteos', 'error');
-                return;
-            }
-
-            const raffleName = document.getElementById('raffle-name').value;
-            const raffleDescription = document.getElementById('raffle-description').value;
-            const ticketPrice = parseFloat(document.getElementById('ticket-price').value);
-            const maxNumbers = parseInt(document.getElementById('max-numbers').value);
-            const raffleImage = document.getElementById('raffle-image').value;
-
-            if (!raffleName || !raffleDescription || !ticketPrice || !maxNumbers || !raffleImage) {
-                showUserAlert('❌ Por favor, completa todos los campos', 'error');
-                return;
-            }
-
-            if (ticketPrice <= 0) {
-                showUserAlert('❌ El precio debe ser mayor a 0', 'error');
-                return;
-            }
-
-            if (maxNumbers < 10) {
-                showUserAlert('❌ La cantidad mínima de números es 10', 'error');
-                return;
-            }
-
-            await createRaffle(raffleName, raffleDescription, ticketPrice, maxNumbers, raffleImage);
+        createRaffleForm.addEventListener('submit', function(e) {
+            console.log('🚫 Previniendo submit del formulario');
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
         });
     }
+}
+
+function handleCreateRaffle() {
+    console.log('🎯 Botón de crear sorteo clickeado');
+    
+    if (!appState.isAdmin) {
+        showUserAlert('❌ Solo el verificador puede crear sorteos', 'error');
+        return;
+    }
+
+    const raffleName = document.getElementById('raffle-name').value;
+    const raffleDescription = document.getElementById('raffle-description').value;
+    const ticketPrice = parseFloat(document.getElementById('ticket-price').value);
+    const maxNumbers = parseInt(document.getElementById('max-numbers').value);
+    const raffleImage = document.getElementById('raffle-image').value;
+
+    console.log('📝 Datos del formulario:', {
+        raffleName,
+        raffleDescription,
+        ticketPrice,
+        maxNumbers,
+        raffleImage
+    });
+
+    // Validaciones
+    if (!raffleName || !raffleDescription || !ticketPrice || !maxNumbers || !raffleImage) {
+        showUserAlert('❌ Por favor, completa todos los campos', 'error');
+        return;
+    }
+
+    if (ticketPrice <= 0) {
+        showUserAlert('❌ El precio debe ser mayor a 0', 'error');
+        return;
+    }
+
+    if (maxNumbers < 10) {
+        showUserAlert('❌ La cantidad mínima de números es 10', 'error');
+        return;
+    }
+
+    createRaffle(raffleName, raffleDescription, ticketPrice, maxNumbers, raffleImage);
 }
 
 async function createRaffle(name, description, price, totalNumbers, image) {
@@ -265,16 +292,32 @@ async function createRaffle(name, description, price, totalNumbers, image) {
         // Guardar en Firebase
         if (window.db) {
             await db.collection('raffles').doc(raffleId).set(newRaffle);
+            console.log('✅ Sorteo guardado en Firebase:', raffleId);
         }
 
         // Limpiar formulario
-        document.getElementById('create-raffle-form').reset();
+        document.getElementById('raffle-name').value = '';
+        document.getElementById('raffle-description').value = '';
+        document.getElementById('ticket-price').value = '';
+        document.getElementById('max-numbers').value = '';
+        document.getElementById('raffle-image').value = '';
         document.getElementById('image-preview').innerHTML = '<div class="emoji-preview">🖼️</div>';
 
         // Actualizar UI
         renderRaffles();
         
         showUserAlert('✅ Sorteo creado exitosamente en VeriRifa-Sol', 'success');
+        
+        // Hacer scroll suave al panel de admin para que el usuario vea el nuevo sorteo
+        setTimeout(() => {
+            const adminPanel = document.getElementById('admin-panel');
+            if (adminPanel) {
+                adminPanel.scrollIntoView({ 
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        }, 1000);
         
     } catch (error) {
         console.error('Error creando sorteo:', error);
@@ -313,6 +356,11 @@ function showUserAlert(message, type = 'info', duration = 5000) {
     const alertIcon = document.getElementById('alert-icon');
     const alertMessage = document.getElementById('alert-message');
 
+    if (!alert || !alertIcon || !alertMessage) {
+        console.error('❌ Elementos de alerta no encontrados');
+        return;
+    }
+
     alert.className = `user-alert ${type}`;
 
     switch(type) {
@@ -340,7 +388,10 @@ function showUserAlert(message, type = 'info', duration = 5000) {
 }
 
 function hideUserAlert() {
-    document.getElementById('user-alert').style.display = 'none';
+    const alert = document.getElementById('user-alert');
+    if (alert) {
+        alert.style.display = 'none';
+    }
 }
 
 // ===== MÓDULO DE BLOCKCHAIN =====
@@ -355,15 +406,21 @@ async function connectToBlockchain() {
         console.log('✅ Conectado a Solana Testnet:', version);
         
         // Actualizar estado de conexión
-        document.getElementById('real-connection-status').innerHTML =
-            `<strong>Estado Blockchain:</strong> ✅ Conectado a Solana Testnet<br>
-             <small>Version: ${version['solana-core']}</small>`;
+        const connectionStatus = document.getElementById('real-connection-status');
+        if (connectionStatus) {
+            connectionStatus.innerHTML =
+                `<strong>Estado Blockchain:</strong> ✅ Conectado a Solana Testnet<br>
+                 <small>Version: ${version['solana-core']}</small>`;
+        }
              
         return true;
     } catch (error) {
         console.error('Error conectando a Solana:', error);
-        document.getElementById('real-connection-status').innerHTML =
-            '<strong>Estado Blockchain:</strong> ❌ Error conectando a Solana Testnet';
+        const connectionStatus = document.getElementById('real-connection-status');
+        if (connectionStatus) {
+            connectionStatus.innerHTML =
+                '<strong>Estado Blockchain:</strong> ❌ Error conectando a Solana Testnet';
+        }
         return false;
     }
 }
@@ -1422,6 +1479,9 @@ function setupAdditionalEventListeners() {
     document.getElementById('winner-status-filter').addEventListener('change', function() {
         filterWinnersTable();
     });
+
+    // Configurar formulario de crear sorteo
+    setupCreateRaffleForm();
 }
 
 function filterWinnersTable() {
