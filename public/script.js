@@ -501,19 +501,12 @@ function createRaffleActionButton(raffle, sold, total, isUserWinner) {
     } else if (raffle.isSelectingWinner) {
         return `<button class="btn" style="width: 100%; background: var(--warning);" disabled>⏳ Seleccionando...</button>`;
     } else {
-        // 🔥 CORRECCIÓN CRÍTICA: Solo mostrar botones de admin si realmente es admin
-        if (appState.isAdmin) {
-            if (sold >= total) {
-                return `<button class="btn btn-warning select-winner-btn" data-raffle="${raffle.id}" style="width: 100%;">🎰 Seleccionar Ganador</button>`;
-            } else {
-                return `<button class="btn" style="width: 100%; background: var(--gray);" disabled>⏳ Esperando (${total - sold} restantes)</button>`;
-            }
+        // 🔥 CORRECCIÓN: Permitir que el ADMIN también pueda participar
+        if (sold >= total) {
+            return `<button class="btn" style="width: 100%; background: var(--gray);" disabled>🔒 Todos vendidos</button>`;
         } else {
-            if (sold >= total) {
-                return `<button class="btn" style="width: 100%; background: var(--gray);" disabled>🔒 Todos vendidos</button>`;
-            } else {
-                return `<button class="btn participate-btn" data-raffle="${raffle.id}" style="width: 100%;">🎫 Participar (${raffle.price} SOL)</button>`;
-            }
+            // 🔥 MOSTRAR BOTÓN DE PARTICIPACIÓN PARA TODOS (admin y usuarios)
+            return `<button class="btn participate-btn" data-raffle="${raffle.id}" style="width: 100%;">🎫 Participar (${raffle.price} SOL)</button>`;
         }
     }
 }
@@ -719,8 +712,12 @@ async function processPayment() {
         statusEl.style.display = 'block';
         detailsEl.textContent = '⏳ Procesando pago...';
         
-        // Simular transacción
+        // 🔥 CORRECCIÓN: SIMULAR TRANSACCIÓN REAL CON DESCUENTO DE SOL
         await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // 🔥 ACTUALIZAR BALANCE - DESCONTAR SOL
+        appState.currentWallet.balance -= total;
+        updateWalletDisplay();
         
         // Actualizar datos locales
         const raffleIndex = appState.raffles.findIndex(r => r.id === appState.currentRaffle.id);
@@ -734,18 +731,22 @@ async function processPayment() {
             
             // 🔥 GUARDAR ACTUALIZACIÓN EN FIREBASE
             if (window.db) {
-                await db.collection('raffles').doc(appState.currentRaffle.id).update({
-                    soldNumbers: appState.raffles[raffleIndex].soldNumbers,
-                    numberOwners: appState.raffles[raffleIndex].numberOwners
-                });
-                console.log('✅ Compra guardada en Firebase');
+                try {
+                    await db.collection('raffles').doc(appState.currentRaffle.id).update({
+                        soldNumbers: appState.raffles[raffleIndex].soldNumbers,
+                        numberOwners: appState.raffles[raffleIndex].numberOwners
+                    });
+                    console.log('✅ Compra guardada en Firebase');
+                } catch (firebaseError) {
+                    console.error('❌ Error guardando en Firebase:', firebaseError);
+                }
             }
         }
         
         detailsEl.textContent = '✅ Pago procesado exitosamente';
         statusEl.className = 'transaction-status transaction-success';
         
-        showUserAlert(`🎉 ¡Compra exitosa! ${appState.selectedNumbers.length} números adquiridos`, 'success');
+        showUserAlert(`🎉 ¡Compra exitosa! ${appState.selectedNumbers.length} números adquiridos por ${total} SOL`, 'success');
         
         setTimeout(() => {
             document.getElementById('number-selection-modal').classList.remove('active');
@@ -835,12 +836,16 @@ async function processClaim() {
             
             // 🔥 GUARDAR EN FIREBASE
             if (window.db) {
-                await db.collection('raffles').doc(appState.currentRaffle.id).update({
-                    prizeClaimed: true,
-                    winnerInfo: appState.raffles[raffleIndex].winnerInfo,
-                    shippingStatus: 'claimed'
-                });
-                console.log('✅ Reclamación guardada en Firebase');
+                try {
+                    await db.collection('raffles').doc(appState.currentRaffle.id).update({
+                        prizeClaimed: true,
+                        winnerInfo: appState.raffles[raffleIndex].winnerInfo,
+                        shippingStatus: 'claimed'
+                    });
+                    console.log('✅ Reclamación guardada en Firebase');
+                } catch (firebaseError) {
+                    console.error('❌ Error guardando reclamación en Firebase:', firebaseError);
+                }
             }
         }
         
@@ -904,12 +909,16 @@ async function selectWinner(raffleId) {
         
         // 🔥 GUARDAR GANADOR EN FIREBASE
         if (window.db) {
-            await db.collection('winners').add(winnerData);
-            await db.collection('raffles').doc(raffleId).update({
-                winner: raffle.winner,
-                completed: true
-            });
-            console.log('✅ Ganador guardado en Firebase');
+            try {
+                await db.collection('winners').add(winnerData);
+                await db.collection('raffles').doc(raffleId).update({
+                    winner: raffle.winner,
+                    completed: true
+                });
+                console.log('✅ Ganador guardado en Firebase');
+            } catch (firebaseError) {
+                console.error('❌ Error guardando ganador en Firebase:', firebaseError);
+            }
         }
         
         showUserAlert(`🏆 ¡Ganador seleccionado! Número: ${winningNumber}`, 'success');
