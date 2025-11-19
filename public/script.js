@@ -108,6 +108,17 @@ async function connectWallet(walletType) {
     console.log(`🔗 Intentando conectar ${walletType}...`);
     
     try {
+        // 🔄 RESETEAR ESTADO ANTERIOR ANTES DE CONECTAR NUEVA WALLET
+        appState.currentWallet = null;
+        appState.isAdmin = false;
+        
+        // Ocultar elementos de admin inmediatamente
+        const adminMenuItem = document.getElementById('admin-menu-item');
+        if (adminMenuItem) adminMenuItem.classList.remove('visible');
+        
+        const adminPanel = document.getElementById('admin-panel');
+        if (adminPanel) adminPanel.classList.remove('active');
+        
         let provider;
         if (walletType === 'phantom') {
             provider = window.solana;
@@ -134,7 +145,7 @@ async function connectWallet(walletType) {
         };
 
         updateWalletDisplay();
-        checkAdminStatus();
+        checkAdminStatus(); // ✅ Esto ahora se ejecuta con el nuevo estado
         
         // Cerrar modal
         const walletModal = document.getElementById('wallet-modal');
@@ -195,17 +206,27 @@ function updateWalletDisplay() {
 }
 
 function checkAdminStatus() {
-    if (!appState.currentWallet) return;
+    if (!appState.currentWallet) {
+        appState.isAdmin = false;
+        return;
+    }
     
-    appState.isAdmin = (appState.currentWallet.publicKey === ADMIN_WALLET_ADDRESS);
+    // ✅ COMPROBACIÓN MÁS ROBUSTA
+    const currentWallet = appState.currentWallet.publicKey;
+    const isAdmin = (currentWallet === ADMIN_WALLET_ADDRESS);
+    
+    console.log(`🔍 Comprobando admin: ${currentWallet} vs ${ADMIN_WALLET_ADDRESS} -> ${isAdmin}`);
+    
+    appState.isAdmin = isAdmin;
     const adminMenuItem = document.getElementById('admin-menu-item');
     
     if (adminMenuItem) {
-        if (appState.isAdmin) {
+        if (isAdmin) {
             adminMenuItem.classList.add('visible');
             showUserAlert('✅ Modo verificador activado', 'success');
         } else {
             adminMenuItem.classList.remove('visible');
+            console.log('👤 Wallet normal conectada - modo usuario');
         }
     }
 }
@@ -221,7 +242,7 @@ function disconnectWallet() {
         }
     }
     
-    // Resetear estado
+    // 🔄 LIMPIAR ESTADO COMPLETAMENTE
     appState.currentWallet = null;
     appState.isAdmin = false;
     appState.isConnected = false;
@@ -258,9 +279,12 @@ function disconnectWallet() {
         connectionStatus.innerHTML = '<strong>Estado Wallet:</strong> Desconectado';
     }
     
-    // Ocultar panel admin
+    // 🔄 OCULTAR PANEL ADMIN SI ESTÁ ABIERTO
     const adminPanel = document.getElementById('admin-panel');
     if (adminPanel) adminPanel.classList.remove('active');
+    
+    const adminMenuItem = document.getElementById('admin-menu-item');
+    if (adminMenuItem) adminMenuItem.classList.remove('visible');
     
     showUserAlert('🔌 Wallet desconectada', 'info');
 }
@@ -309,13 +333,13 @@ async function loadRaffles() {
                 
                 appState.raffles.push(raffle);
             });
-            console.log(`✅ ${appState.raffles.length} sorteos cargados`);
+            console.log(`✅ ${appState.raffles.length} sorteos cargados desde Firebase`);
         } else {
-            console.log('📝 No hay sorteos - creando ejemplos');
+            console.log('📝 No hay sorteos en Firebase - creando ejemplos locales');
             createSampleRaffles();
         }
     } catch (error) {
-        console.error('Error cargando sorteos:', error);
+        console.error('Error cargando sorteos desde Firebase:', error);
         createSampleRaffles();
     }
 }
@@ -905,6 +929,14 @@ async function createRaffle(event) {
             shippingStatus: 'pending',
             createdAt: new Date().toISOString()
         };
+        
+        // 🔥 GUARDAR EN FIREBASE - NUEVO CÓDIGO
+        if (window.db) {
+            await db.collection('raffles').doc(newRaffle.id).set(newRaffle);
+            console.log('✅ Sorteo guardado en Firebase');
+        } else {
+            console.warn('Firebase no disponible, guardando localmente');
+        }
         
         appState.raffles.push(newRaffle);
         
