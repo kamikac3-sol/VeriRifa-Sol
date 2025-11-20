@@ -11,7 +11,6 @@ const FIREBASE_CONFIG = {
 
 const ADMIN_WALLET_ADDRESS = '3Yekte2UrR2rKFBfm3q6D2DyinZKN58svqJvQF87RX3o';
 const NETWORK = 'testnet';
-const LAMPORTS_PER_SOL = 1000000000;
 
 // ===== ESTADO GLOBAL =====
 let appState = {
@@ -54,29 +53,17 @@ async function initializeApp() {
     }
 }
 
-// ===== FIREBASE CORREGIDO =====
+// ===== FIREBASE =====
 async function initializeFirebase() {
     try {
         if (!firebase.apps.length) {
             firebase.initializeApp(FIREBASE_CONFIG);
-            console.log('✅ Firebase app inicializado');
         }
         window.db = firebase.firestore();
-        
-        // Configurar persistencia
-        try {
-            await db.enablePersistence();
-            console.log('✅ Persistencia de Firebase activada');
-        } catch (persistenceError) {
-            console.warn('⚠️ Persistencia no disponible:', persistenceError);
-        }
-        
-        console.log('✅ Firebase configurado correctamente');
-        return true;
+        console.log('✅ Firebase configurado');
     } catch (error) {
         console.error('❌ Error en Firebase:', error);
-        showUserAlert('⚠️ Firebase no disponible - Modo local activado', 'warning');
-        return false;
+        throw error;
     }
 }
 
@@ -124,30 +111,21 @@ async function connectWallet(walletType) {
         let provider;
         if (walletType === 'phantom') {
             provider = window.solana;
-            if (!provider || !provider.isPhantom) {
-                throw new Error('Phantom Wallet no detectada');
-            }
         } else if (walletType === 'solflare') {
             provider = window.solflare;
-            if (!provider) {
-                throw new Error('Solflare Wallet no detectada');
-            }
-        } else {
-            throw new Error('Tipo de wallet no soportado');
         }
 
-        // Solicitar conexión
+        if (!provider) {
+            throw new Error(`${walletType} no detectada`);
+        }
+
         if (!provider.isConnected) {
             await provider.connect();
         }
 
         const publicKey = provider.publicKey;
-        if (!publicKey) {
-            throw new Error('No se pudo obtener la clave pública');
-        }
-
         const balance = await connection.getBalance(publicKey);
-        const balanceInSOL = balance / LAMPORTS_PER_SOL;
+        const balanceInSOL = balance / solanaWeb3.LAMPORTS_PER_SOL;
 
         appState.currentWallet = {
             publicKey: publicKey.toString(),
@@ -172,7 +150,7 @@ async function connectWallet(walletType) {
         let errorMessage = `Error conectando ${walletType}`;
         if (error.message.includes('User rejected')) {
             errorMessage = 'Usuario canceló la conexión';
-        } else if (error.message.includes('not detected') || error.message.includes('no detectada')) {
+        } else if (error.message.includes('not detected')) {
             errorMessage = `${walletType} no detectada. ¿Está instalada?`;
         }
         
@@ -188,21 +166,21 @@ function updateWalletDisplay() {
     const shortAddress = `${publicKey.substring(0, 6)}...${publicKey.substring(publicKey.length - 4)}`;
     
     // Actualizar elementos de UI
-    const walletAddress = document.getElementById('connected-wallet-address');
-    const walletBalance = document.getElementById('wallet-balance');
+    const addressElement = document.getElementById('connected-wallet-address');
+    const balanceElement = document.getElementById('wallet-balance');
     const connectBtn = document.getElementById('connect-wallet-btn');
     const networkIndicator = document.getElementById('network-indicator');
     const disconnectBtn = document.getElementById('disconnect-wallet-btn');
-    const winnerInfoBtn = document.getElementById('winner-info-btn');
+    const winnerBtn = document.getElementById('winner-info-btn');
     
-    if (walletAddress) {
-        walletAddress.textContent = shortAddress;
-        walletAddress.style.display = 'block';
+    if (addressElement) {
+        addressElement.textContent = shortAddress;
+        addressElement.style.display = 'block';
     }
     
-    if (walletBalance) {
-        walletBalance.textContent = `${balance.toFixed(4)} SOL`;
-        walletBalance.style.display = 'block';
+    if (balanceElement) {
+        balanceElement.textContent = `${balance.toFixed(4)} SOL`;
+        balanceElement.style.display = 'block';
     }
     
     if (connectBtn) {
@@ -211,10 +189,16 @@ function updateWalletDisplay() {
     
     if (networkIndicator) {
         networkIndicator.textContent = '🟢 Solana Testnet';
+        networkIndicator.style.display = 'block';
     }
     
-    if (disconnectBtn) disconnectBtn.style.display = 'block';
-    if (winnerInfoBtn) winnerInfoBtn.style.display = 'block';
+    if (disconnectBtn) {
+        disconnectBtn.style.display = 'block';
+    }
+    
+    if (winnerBtn) {
+        winnerBtn.style.display = 'block';
+    }
     
     // Actualizar estado de conexión
     const connectionStatus = document.getElementById('connection-status');
@@ -224,22 +208,35 @@ function updateWalletDisplay() {
 }
 
 function checkAdminStatus() {
-    if (!appState.currentWallet) return;
+    if (!appState.currentWallet) {
+        appState.isAdmin = false;
+        updateAdminUI();
+        return;
+    }
     
     appState.isAdmin = (appState.currentWallet.publicKey === ADMIN_WALLET_ADDRESS);
-    const adminMenuItem = document.getElementById('admin-menu-item');
+    updateAdminUI();
     
+    if (appState.isAdmin) {
+        showUserAlert('✅ Modo verificador activado', 'success');
+    }
+}
+
+function updateAdminUI() {
+    const adminMenuItem = document.getElementById('admin-menu-item');
     if (adminMenuItem) {
         if (appState.isAdmin) {
             adminMenuItem.classList.add('visible');
-            showUserAlert('✅ Modo verificador activado', 'success');
-            
-            // Mostrar panel admin automáticamente
-            document.getElementById('admin-panel').classList.add('active');
         } else {
             adminMenuItem.classList.remove('visible');
+            // Asegurar que el panel admin esté cerrado
+            const adminPanel = document.getElementById('admin-panel');
+            if (adminPanel) adminPanel.classList.remove('active');
         }
     }
+    
+    // Re-renderizar sorteos para actualizar botones
+    renderRaffles();
 }
 
 function disconnectWallet() {
@@ -253,12 +250,14 @@ function disconnectWallet() {
         }
     }
     
-    // Resetear estado
+    // Resetear estado COMPLETO
     appState.currentWallet = null;
     appState.isAdmin = false;
     appState.isConnected = false;
+    appState.selectedNumbers = [];
+    appState.currentRaffle = null;
     
-    // Resetear UI
+    // Resetear UI - elementos a ocultar
     const elementsToHide = [
         'connected-wallet-address',
         'wallet-balance', 
@@ -282,6 +281,7 @@ function disconnectWallet() {
     const networkIndicator = document.getElementById('network-indicator');
     if (networkIndicator) {
         networkIndicator.textContent = '🔴 Desconectado';
+        networkIndicator.style.display = 'block';
     }
     
     const connectionStatus = document.getElementById('connection-status');
@@ -289,112 +289,17 @@ function disconnectWallet() {
         connectionStatus.innerHTML = '<strong>Estado Wallet:</strong> Desconectado';
     }
     
-    // Ocultar panel admin
+    // Ocultar panel admin y resetear menú admin
     const adminPanel = document.getElementById('admin-panel');
     if (adminPanel) adminPanel.classList.remove('active');
     
+    const adminMenuItem = document.getElementById('admin-menu-item');
+    if (adminMenuItem) adminMenuItem.classList.remove('visible');
+    
+    // Re-renderizar sorteos para mostrar vista normal
+    renderRaffles();
+    
     showUserAlert('🔌 Wallet desconectada', 'info');
-}
-
-// ===== FIREBASE FUNCTIONS =====
-async function saveRaffleToFirebase(raffle) {
-    try {
-        if (!window.db) {
-            console.error('Firebase no inicializado');
-            return false;
-        }
-        
-        await db.collection('raffles').doc(raffle.id).set(raffle);
-        console.log('✅ Sorteo guardado en Firebase:', raffle.id);
-        return true;
-    } catch (error) {
-        console.error('❌ Error guardando en Firebase:', error);
-        return false;
-    }
-}
-
-async function updateRaffleInFirebase(raffleId, updates) {
-    try {
-        if (!window.db) {
-            console.error('Firebase no inicializado');
-            return false;
-        }
-        
-        await db.collection('raffles').doc(raffleId).update(updates);
-        console.log('✅ Sorteo actualizado en Firebase:', raffleId);
-        return true;
-    } catch (error) {
-        console.error('❌ Error actualizando en Firebase:', error);
-        return false;
-    }
-}
-
-async function saveWinnerToFirebase(winnerData) {
-    try {
-        if (!window.db) {
-            console.error('Firebase no inicializado');
-            return false;
-        }
-        
-        const winnerRef = await db.collection('winners').add(winnerData);
-        console.log('✅ Ganador guardado en Firebase:', winnerRef.id);
-        return winnerRef.id;
-    } catch (error) {
-        console.error('❌ Error guardando ganador:', error);
-        return null;
-    }
-}
-
-// ===== TRANSACCIONES REALES DE SOLANA =====
-async function sendSolanaTransaction(recipientAddress, amountInSOL) {
-    try {
-        if (!appState.currentWallet?.provider) {
-            throw new Error('Wallet no conectada');
-        }
-
-        const provider = appState.currentWallet.provider;
-        const connection = window.connection;
-
-        // Convertir SOL a lamports
-        const amountInLamports = Math.floor(amountInSOL * LAMPORTS_PER_SOL);
-        
-        // Crear transacción
-        const transaction = new solanaWeb3.Transaction().add(
-            solanaWeb3.SystemProgram.transfer({
-                fromPubkey: new solanaWeb3.PublicKey(appState.currentWallet.publicKey),
-                toPubkey: new solanaWeb3.PublicKey(recipientAddress),
-                lamports: amountInLamports,
-            })
-        );
-
-        // Obtener blockhash reciente
-        const { blockhash } = await connection.getRecentBlockhash();
-        transaction.recentBlockhash = blockhash;
-        transaction.feePayer = new solanaWeb3.PublicKey(appState.currentWallet.publicKey);
-
-        // Firmar transacción
-        const signedTransaction = await provider.signTransaction(transaction);
-        
-        // Enviar transacción
-        const signature = await connection.sendRawTransaction(signedTransaction.serialize());
-        
-        // Confirmar transacción
-        await connection.confirmTransaction(signature, 'confirmed');
-        
-        console.log('✅ Transacción exitosa:', signature);
-        return {
-            success: true,
-            signature: signature,
-            amount: amountInSOL
-        };
-
-    } catch (error) {
-        console.error('❌ Error en transacción:', error);
-        return {
-            success: false,
-            error: error.message
-        };
-    }
 }
 
 // ===== DATA MANAGEMENT =====
@@ -426,27 +331,24 @@ async function loadRaffles() {
     }
 
     try {
-        const snapshot = await db.collection('raffles').orderBy('createdAt', 'desc').get();
+        const snapshot = await db.collection('raffles').get();
         appState.raffles = [];
         
         if (!snapshot.empty) {
             snapshot.forEach(doc => {
-                const raffle = { 
-                    id: doc.id, 
-                    ...doc.data(),
-                    // Asegurar campos requeridos
-                    soldNumbers: doc.data().soldNumbers || [],
-                    numberOwners: doc.data().numberOwners || {},
-                    completed: doc.data().completed || false,
-                    prizeClaimed: doc.data().prizeClaimed || false,
-                    shippingStatus: doc.data().shippingStatus || 'pending',
-                    totalCollected: doc.data().totalCollected || 0
-                };
+                const raffle = { id: doc.id, ...doc.data() };
+                // Asegurar campos requeridos
+                raffle.soldNumbers = raffle.soldNumbers || [];
+                raffle.numberOwners = raffle.numberOwners || {};
+                raffle.completed = raffle.completed || false;
+                raffle.prizeClaimed = raffle.prizeClaimed || false;
+                raffle.shippingStatus = raffle.shippingStatus || 'pending';
+                
                 appState.raffles.push(raffle);
             });
-            console.log(`✅ ${appState.raffles.length} sorteos cargados desde Firebase`);
+            console.log(`✅ ${appState.raffles.length} sorteos cargados`);
         } else {
-            console.log('📝 No hay sorteos en Firebase - creando ejemplos');
+            console.log('📝 No hay sorteos - creando ejemplos');
             createSampleRaffles();
         }
     } catch (error) {
@@ -458,7 +360,7 @@ async function loadRaffles() {
 function createSampleRaffles() {
     appState.raffles = [
         {
-            id: 'sample_1_' + Date.now(),
+            id: 'sample_1',
             name: 'PlayStation 5 Edición Especial',
             description: 'Sorteo de una PlayStation 5 nueva en caja',
             price: 0.1,
@@ -466,20 +368,15 @@ function createSampleRaffles() {
             image: '🎮',
             prize: 'PlayStation 5',
             soldNumbers: [1, 2, 3, 4, 5, 10, 15, 20],
-            numberOwners: {
-                1: 'EjemploWallet1',
-                2: 'EjemploWallet2',
-                3: 'EjemploWallet3'
-            },
+            numberOwners: {},
             winner: null,
             completed: false,
             prizeClaimed: false,
             shippingStatus: 'pending',
-            createdAt: new Date().toISOString(),
-            totalCollected: 0.8
+            createdAt: new Date().toISOString()
         },
         {
-            id: 'sample_2_' + Date.now(), 
+            id: 'sample_2', 
             name: 'iPhone 15 Pro Max',
             description: 'Último modelo de iPhone con 512GB',
             price: 0.2,
@@ -487,16 +384,12 @@ function createSampleRaffles() {
             image: '📱',
             prize: 'iPhone 15 Pro Max',
             soldNumbers: [1, 5, 10, 15],
-            numberOwners: {
-                1: 'EjemploWallet4',
-                5: 'EjemploWallet5'
-            },
+            numberOwners: {},
             winner: null,
             completed: false,
             prizeClaimed: false,
             shippingStatus: 'pending',
-            createdAt: new Date().toISOString(),
-            totalCollected: 0.4
+            createdAt: new Date().toISOString()
         }
     ];
 }
@@ -558,7 +451,6 @@ function renderRaffles() {
             <div style="text-align: center; color: var(--gray); padding: 3rem;">
                 <h3>📝 No hay sorteos activos</h3>
                 <p>Los sorteos aparecerán aquí pronto</p>
-                ${appState.isAdmin ? '<button class="btn" onclick="document.getElementById(\'admin-panel\').classList.add(\'active\')">Crear Primer Sorteo</button>' : ''}
             </div>
         `;
         return;
@@ -603,6 +495,7 @@ function createRaffleCard(raffle) {
 }
 
 function createRaffleActionButton(raffle, sold, total, isUserWinner) {
+    // Si hay ganador
     if (raffle.winner) {
         if (isUserWinner) {
             if (raffle.prizeClaimed) {
@@ -614,21 +507,25 @@ function createRaffleActionButton(raffle, sold, total, isUserWinner) {
         } else {
             return `<button class="btn" style="width: 100%; background: var(--gray);" disabled>❌ No Ganaste</button>`;
         }
-    } else if (raffle.isSelectingWinner) {
+    } 
+    // Si está seleccionando ganador
+    else if (raffle.isSelectingWinner) {
         return `<button class="btn" style="width: 100%; background: var(--warning);" disabled>⏳ Seleccionando...</button>`;
-    } else {
-        if (appState.isAdmin) {
-            if (sold >= total) {
-                return `<button class="btn btn-warning select-winner-btn" data-raffle="${raffle.id}" style="width: 100%;">🎰 Seleccionar Ganador</button>`;
-            } else {
-                return `<button class="btn" style="width: 100%; background: var(--gray);" disabled>⏳ Esperando (${total - sold} restantes)</button>`;
-            }
+    } 
+    // Si es administrador
+    else if (appState.isAdmin) {
+        if (sold >= total) {
+            return `<button class="btn btn-warning select-winner-btn" data-raffle="${raffle.id}" style="width: 100%;">🎰 Seleccionar Ganador</button>`;
         } else {
-            if (sold >= total) {
-                return `<button class="btn" style="width: 100%; background: var(--gray);" disabled>🔒 Todos vendidos</button>`;
-            } else {
-                return `<button class="btn participate-btn" data-raffle="${raffle.id}" style="width: 100%;">🎫 Participar (${raffle.price} SOL)</button>`;
-            }
+            return `<button class="btn" style="width: 100%; background: var(--gray);" disabled>⏳ Esperando (${total - sold} restantes)</button>`;
+        }
+    } 
+    // Si es usuario normal
+    else {
+        if (sold >= total) {
+            return `<button class="btn" style="width: 100%; background: var(--gray);" disabled>🔒 Todos vendidos</button>`;
+        } else {
+            return `<button class="btn participate-btn" data-raffle="${raffle.id}" style="width: 100%;">🎫 Participar (${raffle.price} SOL)</button>`;
         }
     }
 }
@@ -703,9 +600,30 @@ function renderWinnersArchive() {
 
 // ===== NUMBER SELECTION MODAL =====
 function openNumberSelection(raffleId) {
+    // Verificar que hay wallet conectada
+    if (!appState.currentWallet) {
+        showUserAlert('🔗 Conecta tu wallet primero', 'warning');
+        document.getElementById('wallet-modal').classList.add('active');
+        return;
+    }
+    
     const raffle = appState.raffles.find(r => r.id === raffleId);
     if (!raffle) {
         showUserAlert('❌ Sorteo no encontrado', 'error');
+        return;
+    }
+    
+    // Verificar que el sorteo no está completado
+    if (raffle.completed || raffle.winner) {
+        showUserAlert('❌ Este sorteo ya ha finalizado', 'error');
+        return;
+    }
+    
+    // Verificar que hay números disponibles
+    const sold = raffle.soldNumbers?.length || 0;
+    const total = raffle.totalNumbers || 100;
+    if (sold >= total) {
+        showUserAlert('❌ Todos los números están vendidos', 'warning');
         return;
     }
     
@@ -716,10 +634,7 @@ function openNumberSelection(raffleId) {
     // Actualizar modal
     document.getElementById('modal-raffle-name').textContent = raffle.name;
     document.getElementById('price-per-number').textContent = `${raffle.price} SOL`;
-    
-    if (appState.currentWallet) {
-        document.getElementById('user-balance').textContent = `${appState.currentWallet.balance.toFixed(4)} SOL`;
-    }
+    document.getElementById('user-balance').textContent = `${appState.currentWallet.balance.toFixed(4)} SOL`;
     
     renderNumberGrid();
     updatePaymentSummary();
@@ -742,46 +657,40 @@ function renderNumberGrid() {
     const endNum = Math.min(appState.currentPage * numbersPerPage, raffle.totalNumbers);
     
     // Info de página
-    if (pageInfo) {
-        pageInfo.textContent = `Página ${appState.currentPage} de ${totalPages} (Números ${startNum}-${endNum})`;
-    }
+    pageInfo.textContent = `Página ${appState.currentPage} de ${totalPages} (Números ${startNum}-${endNum})`;
     
     // Paginación
-    if (pagination) {
-        pagination.innerHTML = '';
-        for (let i = 1; i <= totalPages; i++) {
-            const btn = document.createElement('button');
-            btn.className = `page-btn ${i === appState.currentPage ? 'active' : ''}`;
-            btn.textContent = i;
-            btn.onclick = () => {
-                appState.currentPage = i;
-                renderNumberGrid();
-            };
-            pagination.appendChild(btn);
-        }
+    pagination.innerHTML = '';
+    for (let i = 1; i <= totalPages; i++) {
+        const btn = document.createElement('button');
+        btn.className = `page-btn ${i === appState.currentPage ? 'active' : ''}`;
+        btn.textContent = i;
+        btn.onclick = () => {
+            appState.currentPage = i;
+            renderNumberGrid();
+        };
+        pagination.appendChild(btn);
     }
     
     // Números
-    if (grid) {
-        grid.innerHTML = '';
-        for (let i = startNum; i <= endNum; i++) {
-            const btn = document.createElement('button');
-            btn.className = 'number-btn';
-            btn.textContent = i;
-            
-            if (raffle.soldNumbers?.includes(i)) {
-                btn.classList.add('sold');
-                btn.disabled = true;
-            } else if (appState.selectedNumbers.includes(i)) {
-                btn.classList.add('selected');
-            }
-            
-            if (!raffle.soldNumbers?.includes(i)) {
-                btn.onclick = () => toggleNumber(i);
-            }
-            
-            grid.appendChild(btn);
+    grid.innerHTML = '';
+    for (let i = startNum; i <= endNum; i++) {
+        const btn = document.createElement('button');
+        btn.className = 'number-btn';
+        btn.textContent = i;
+        
+        if (raffle.soldNumbers?.includes(i)) {
+            btn.classList.add('sold');
+            btn.disabled = true;
+        } else if (appState.selectedNumbers.includes(i)) {
+            btn.classList.add('selected');
         }
+        
+        if (!raffle.soldNumbers?.includes(i)) {
+            btn.onclick = () => toggleNumber(i);
+        }
+        
+        grid.appendChild(btn);
     }
 }
 
@@ -815,14 +724,10 @@ function updatePaymentSummary() {
     const price = appState.currentRaffle?.price || 0;
     const total = count * price;
     
-    const selectedCount = document.getElementById('selected-count');
-    const totalPayment = document.getElementById('total-payment');
-    
-    if (selectedCount) selectedCount.textContent = count;
-    if (totalPayment) totalPayment.textContent = `${total.toFixed(4)} SOL`;
+    document.getElementById('selected-count').textContent = count;
+    document.getElementById('total-payment').textContent = `${total.toFixed(4)} SOL`;
 }
 
-// ===== PROCESAMIENTO DE PAGO REAL =====
 async function processPayment() {
     if (!appState.currentWallet || !appState.currentRaffle) {
         showUserAlert('❌ Error: Wallet no conectada', 'error');
@@ -835,32 +740,22 @@ async function processPayment() {
     }
     
     const total = appState.selectedNumbers.length * appState.currentRaffle.price;
-    
-    // Verificar saldo
     if (appState.currentWallet.balance < total) {
-        showUserAlert(`❌ Saldo insuficiente. Necesitas ${total.toFixed(4)} SOL`, 'error');
+        showUserAlert('❌ Saldo insuficiente', 'error');
         return;
     }
-
+    
     try {
         const statusEl = document.getElementById('payment-status');
         const detailsEl = document.getElementById('payment-details');
         
-        if (statusEl) statusEl.style.display = 'block';
-        if (detailsEl) detailsEl.textContent = '⏳ Iniciando transacción en Solana...';
-
-        // 1. Realizar transacción real a la wallet del administrador
-        const transactionResult = await sendSolanaTransaction(ADMIN_WALLET_ADDRESS, total);
+        statusEl.style.display = 'block';
+        detailsEl.textContent = '⏳ Procesando pago...';
         
-        if (!transactionResult.success) {
-            throw new Error(transactionResult.error);
-        }
-
-        if (detailsEl) {
-            detailsEl.textContent = `✅ Transacción confirmada: ${transactionResult.signature.substring(0, 16)}...`;
-        }
-
-        // 2. Actualizar datos locales
+        // Simular transacción
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Actualizar datos locales
         const raffleIndex = appState.raffles.findIndex(r => r.id === appState.currentRaffle.id);
         if (raffleIndex !== -1) {
             appState.selectedNumbers.forEach(num => {
@@ -869,46 +764,23 @@ async function processPayment() {
                     appState.raffles[raffleIndex].numberOwners[num] = appState.currentWallet.publicKey;
                 }
             });
-            
-            // Actualizar total recolectado
-            appState.raffles[raffleIndex].totalCollected = 
-                (appState.raffles[raffleIndex].totalCollected || 0) + total;
-
-            // 3. Guardar en Firebase
-            await updateRaffleInFirebase(appState.currentRaffle.id, {
-                soldNumbers: appState.raffles[raffleIndex].soldNumbers,
-                numberOwners: appState.raffles[raffleIndex].numberOwners,
-                totalCollected: appState.raffles[raffleIndex].totalCollected
-            });
         }
-
-        // 4. Actualizar balance local
-        appState.currentWallet.balance -= total;
-        updateWalletDisplay();
-
-        if (detailsEl) {
-            detailsEl.innerHTML = `
-                ✅ Pago procesado exitosamente!<br>
-                <small>TX: ${transactionResult.signature.substring(0, 20)}...</small>
-            `;
-        }
-        if (statusEl) statusEl.className = 'transaction-status transaction-success';
         
-        showUserAlert(`🎉 ¡Compra exitosa! ${appState.selectedNumbers.length} números adquiridos por ${total} SOL`, 'success');
+        detailsEl.textContent = '✅ Pago procesado exitosamente';
+        statusEl.className = 'transaction-status transaction-success';
+        
+        showUserAlert(`🎉 ¡Compra exitosa! ${appState.selectedNumbers.length} números adquiridos`, 'success');
         
         setTimeout(() => {
             document.getElementById('number-selection-modal').classList.remove('active');
             renderRaffles();
-        }, 3000);
+        }, 1500);
         
     } catch (error) {
         console.error('Error en pago:', error);
-        const detailsEl = document.getElementById('payment-details');
-        const statusEl = document.getElementById('payment-status');
-        
-        if (detailsEl) detailsEl.textContent = '❌ Error: ' + error.message;
-        if (statusEl) statusEl.className = 'transaction-status transaction-error';
-        showUserAlert('❌ Error en el pago: ' + error.message, 'error');
+        document.getElementById('payment-details').textContent = '❌ Error procesando pago';
+        document.getElementById('payment-status').className = 'transaction-status transaction-error';
+        showUserAlert('❌ Error en el pago', 'error');
     }
 }
 
@@ -961,15 +833,17 @@ async function processClaim() {
         showUserAlert('❌ Email inválido', 'error');
         return;
     }
-
+    
     try {
         const statusEl = document.getElementById('claim-status');
         const detailsEl = document.getElementById('claim-details');
         
-        if (statusEl) statusEl.style.display = 'block';
-        if (detailsEl) detailsEl.textContent = '⏳ Registrando reclamación...';
-
-        // Actualizar datos locales
+        statusEl.style.display = 'block';
+        detailsEl.textContent = '⏳ Procesando reclamación...';
+        
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Actualizar datos
         const raffleIndex = appState.raffles.findIndex(r => r.id === appState.currentRaffle.id);
         if (raffleIndex !== -1) {
             appState.raffles[raffleIndex].prizeClaimed = true;
@@ -982,75 +856,40 @@ async function processClaim() {
                 claimDate: new Date().toISOString()
             };
             appState.raffles[raffleIndex].shippingStatus = 'claimed';
-
-            // Actualizar en Firebase
-            await updateRaffleInFirebase(appState.currentRaffle.id, {
-                prizeClaimed: true,
-                winnerInfo: appState.raffles[raffleIndex].winnerInfo,
-                shippingStatus: 'claimed'
-            });
-
-            // Actualizar ganador en Firebase
-            const winnerIndex = appState.winners.findIndex(w => 
-                w.raffleName === appState.currentRaffle.name && 
-                w.winningNumber === appState.currentRaffle.winner.number
-            );
-            
-            if (winnerIndex !== -1) {
-                appState.winners[winnerIndex].claimed = true;
-                appState.winners[winnerIndex].winnerInfo = appState.raffles[raffleIndex].winnerInfo;
-                
-                // Actualizar winner en Firebase si existe
-                if (appState.winners[winnerIndex].id) {
-                    await db.collection('winners').doc(appState.winners[winnerIndex].id).update({
-                        claimed: true,
-                        winnerInfo: appState.raffles[raffleIndex].winnerInfo
-                    });
-                }
-            }
         }
-
-        if (detailsEl) detailsEl.textContent = '✅ ¡Premio reclamado exitosamente!';
-        showUserAlert('🎉 Premio reclamado. Te contactaremos pronto para el envío.', 'success');
+        
+        detailsEl.textContent = '✅ ¡Premio reclamado!';
+        showUserAlert('🎉 Premio reclamado exitosamente', 'success');
         
         setTimeout(() => {
             document.getElementById('claim-prize-modal').classList.remove('active');
             renderRaffles();
-        }, 2000);
+        }, 1500);
         
     } catch (error) {
         console.error('Error reclamando premio:', error);
-        const detailsEl = document.getElementById('claim-details');
-        if (detailsEl) detailsEl.textContent = '❌ Error: ' + error.message;
-        showUserAlert('❌ Error reclamando premio: ' + error.message, 'error');
+        document.getElementById('claim-details').textContent = '❌ Error reclamando premio';
+        showUserAlert('❌ Error reclamando premio', 'error');
     }
 }
 
 // ===== ADMIN FUNCTIONS =====
 async function selectWinner(raffleId) {
     if (!appState.isAdmin) {
-        showUserAlert('❌ Solo administradores pueden seleccionar ganadores', 'error');
+        showUserAlert('❌ Solo administradores', 'error');
         return;
     }
     
     const raffle = appState.raffles.find(r => r.id === raffleId);
     if (!raffle || raffle.soldNumbers?.length === 0) {
-        showUserAlert('❌ No hay números vendidos en este sorteo', 'warning');
+        showUserAlert('❌ No hay números vendidos', 'warning');
         return;
     }
     
-    if (raffle.completed) {
-        showUserAlert('❌ Este sorteo ya tiene un ganador', 'warning');
-        return;
-    }
-
     try {
         raffle.isSelectingWinner = true;
         renderRaffles();
         
-        showUserAlert('🎰 Seleccionando ganador aleatoriamente...', 'info');
-
-        // Simular proceso aleatorio (en producción usarías un RNG verificable)
         await new Promise(resolve => setTimeout(resolve, 3000));
         
         const randomIndex = Math.floor(Math.random() * raffle.soldNumbers.length);
@@ -1064,32 +903,19 @@ async function selectWinner(raffleId) {
         };
         raffle.completed = true;
         raffle.isSelectingWinner = false;
-
-        // Registrar ganador en Firebase
+        
+        // Registrar ganador
         const winnerData = {
             raffleName: raffle.name,
             prize: raffle.prize,
             winningNumber: winningNumber,
             winnerWallet: winnerWallet,
             winnerDate: new Date().toISOString(),
-            claimed: false,
-            transactionHash: 'manual_selection_' + Date.now()
+            claimed: false
         };
         
-        const winnerId = await saveWinnerToFirebase(winnerData);
-        if (winnerId) {
-            winnerData.id = winnerId;
-        }
-        
-        await updateRaffleInFirebase(raffleId, {
-            winner: raffle.winner,
-            completed: true
-        });
-
-        // Agregar a winners local
         appState.winners.push(winnerData);
-        
-        showUserAlert(`🏆 ¡Ganador seleccionado! Número: ${winningNumber} - Wallet: ${winnerWallet.substring(0, 8)}...`, 'success');
+        showUserAlert(`🏆 ¡Ganador seleccionado! Número: ${winningNumber}`, 'success');
         
         renderRaffles();
         renderWinnersArchive();
@@ -1098,16 +924,15 @@ async function selectWinner(raffleId) {
         console.error('Error seleccionando ganador:', error);
         raffle.isSelectingWinner = false;
         renderRaffles();
-        showUserAlert('❌ Error seleccionando ganador: ' + error.message, 'error');
+        showUserAlert('❌ Error seleccionando ganador', 'error');
     }
 }
 
-// ===== CREACIÓN DE SORTEOS =====
 async function createRaffle(event) {
     event.preventDefault();
     
     if (!appState.isAdmin) {
-        showUserAlert('❌ Solo administradores pueden crear sorteos', 'error');
+        showUserAlert('❌ Solo administradores', 'error');
         return;
     }
     
@@ -1119,31 +944,20 @@ async function createRaffle(event) {
         image: document.getElementById('raffle-image').value.trim()
     };
     
-    // Validaciones
-    if (Object.values(formData).some(value => !value || isNaN(value))) {
-        showUserAlert('❌ Completa todos los campos correctamente', 'error');
+    if (Object.values(formData).some(value => !value)) {
+        showUserAlert('❌ Completa todos los campos', 'error');
         return;
     }
     
-    if (formData.price <= 0) {
-        showUserAlert('❌ El precio debe ser mayor a 0', 'error');
-        return;
-    }
-    
-    if (formData.totalNumbers < 10) {
-        showUserAlert('❌ Mínimo 10 números por sorteo', 'error');
-        return;
-    }
-
     try {
         const statusEl = document.getElementById('transaction-status');
         const detailsEl = document.getElementById('transaction-details');
         
-        if (statusEl) statusEl.style.display = 'block';
-        if (detailsEl) detailsEl.textContent = '⏳ Creando sorteo verificado...';
-
+        statusEl.style.display = 'block';
+        detailsEl.textContent = '⏳ Creando sorteo...';
+        
         const newRaffle = {
-            id: 'raffle_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+            id: 'raffle_' + Date.now(),
             ...formData,
             prize: formData.name,
             soldNumbers: [],
@@ -1152,43 +966,30 @@ async function createRaffle(event) {
             completed: false,
             prizeClaimed: false,
             shippingStatus: 'pending',
-            createdAt: new Date().toISOString(),
-            adminWallet: ADMIN_WALLET_ADDRESS,
-            totalCollected: 0
+            createdAt: new Date().toISOString()
         };
-
-        // Guardar en Firebase
-        const firebaseSuccess = await saveRaffleToFirebase(newRaffle);
         
-        if (!firebaseSuccess) {
-            throw new Error('Error guardando en la base de datos');
-        }
-
-        // Agregar al estado local
         appState.raffles.push(newRaffle);
         
-        if (detailsEl) detailsEl.textContent = '✅ Sorteo creado y guardado en Firebase';
-        if (statusEl) statusEl.className = 'transaction-status transaction-success';
-
+        detailsEl.textContent = '✅ Sorteo creado exitosamente';
+        statusEl.className = 'transaction-status transaction-success';
+        
         // Limpiar formulario
         document.getElementById('create-raffle-form').reset();
         document.getElementById('image-preview').innerHTML = '<div class="emoji-preview">🖼️</div>';
         
-        showUserAlert('🎯 Sorteo verificado creado exitosamente', 'success');
+        showUserAlert('🎯 Sorteo creado exitosamente', 'success');
         
         setTimeout(() => {
-            if (statusEl) statusEl.style.display = 'none';
+            statusEl.style.display = 'none';
             renderRaffles();
-        }, 2000);
+        }, 1500);
         
     } catch (error) {
         console.error('Error creando sorteo:', error);
-        const detailsEl = document.getElementById('transaction-details');
-        const statusEl = document.getElementById('transaction-status');
-        
-        if (detailsEl) detailsEl.textContent = '❌ Error: ' + error.message;
-        if (statusEl) statusEl.className = 'transaction-status transaction-error';
-        showUserAlert('❌ Error creando sorteo: ' + error.message, 'error');
+        document.getElementById('transaction-details').textContent = '❌ Error creando sorteo';
+        document.getElementById('transaction-status').className = 'transaction-status transaction-error';
+        showUserAlert('❌ Error creando sorteo', 'error');
     }
 }
 
