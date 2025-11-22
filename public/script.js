@@ -21,7 +21,8 @@ let appState = {
     winners: [],
     currentRaffle: null,
     selectedNumbers: [],
-    currentPage: 1
+    currentPage: 1,
+    firebaseInitialized: false
 };
 
 // ===== INICIALIZACIÓN PRINCIPAL =====
@@ -36,7 +37,12 @@ async function initializeApp() {
         checkWalletAvailability();
         
         console.log('1. Inicializando Firebase...');
-        await initializeFirebase();
+        const firebaseSuccess = await initializeFirebase();
+        
+        if (!firebaseSuccess) {
+            console.warn('⚠️ Firebase no disponible - Modo local activado');
+            showUserAlert('⚠️ Modo local activado - Los datos no se guardarán en la nube', 'warning', 8000);
+        }
         
         console.log('2. Configurando event listeners...');
         setupAllEventListeners();
@@ -59,31 +65,61 @@ async function initializeApp() {
 // ===== FIREBASE =====
 async function initializeFirebase() {
     try {
+        // Verificar que Firebase está disponible
+        if (typeof firebase === 'undefined') {
+            console.error('❌ Firebase no está cargado');
+            return false;
+        }
+        
         if (!firebase.apps.length) {
             firebase.initializeApp(FIREBASE_CONFIG);
+            console.log('🔥 Firebase app inicializada');
         }
+        
         window.db = firebase.firestore();
         
-        // Configurar persistencia offline
-        await db.enablePersistence()
-            .catch((err) => {
-                console.log('Persistencia no soportada:', err);
-            });
-            
-        console.log('✅ Firebase configurado con persistencia');
+        // Probar la conexión
+        const testConnection = await db.collection('test').doc('connection').get();
+        console.log('✅ Firebase Firestore conectado correctamente');
+        
+        appState.firebaseInitialized = true;
+        return true;
+        
     } catch (error) {
         console.error('❌ Error en Firebase:', error);
-        throw error;
+        
+        // Crear una simulación de Firebase para desarrollo
+        window.db = {
+            collection: (name) => ({
+                doc: (id) => ({
+                    set: (data) => {
+                        console.log('📝 Simulación Firebase - Guardando:', { collection: name, id, data });
+                        return Promise.resolve();
+                    },
+                    update: (data) => {
+                        console.log('📝 Simulación Firebase - Actualizando:', { collection: name, id, data });
+                        return Promise.resolve();
+                    },
+                    get: () => Promise.resolve({ exists: false, data: () => null })
+                }),
+                get: () => Promise.resolve({ empty: true, forEach: () => {} }),
+                where: () => ({ orderBy: () => ({ get: () => Promise.resolve({ empty: true, forEach: () => {} }) }) })
+            })
+        };
+        
+        appState.firebaseInitialized = false;
+        return false;
     }
 }
 
 async function saveRaffleToFirebase(raffle) {
-    if (!window.db) {
-        console.log('Firebase no disponible - guardando localmente');
+    if (!window.db || !appState.firebaseInitialized) {
+        console.log('📝 Firebase no disponible - Guardando localmente');
         return false;
     }
 
     try {
+        console.log('🔥 Guardando en Firebase:', raffle.id);
         await db.collection('raffles').doc(raffle.id).set(raffle);
         console.log('✅ Sorteo guardado en Firebase:', raffle.id);
         return true;
@@ -94,12 +130,13 @@ async function saveRaffleToFirebase(raffle) {
 }
 
 async function updateRaffleInFirebase(raffleId, updates) {
-    if (!window.db) {
-        console.log('Firebase no disponible - actualizando localmente');
+    if (!window.db || !appState.firebaseInitialized) {
+        console.log('📝 Firebase no disponible - Actualizando localmente');
         return false;
     }
 
     try {
+        console.log('🔥 Actualizando en Firebase:', raffleId, updates);
         await db.collection('raffles').doc(raffleId).update(updates);
         console.log('✅ Sorteo actualizado en Firebase:', raffleId);
         return true;
@@ -112,53 +149,20 @@ async function updateRaffleInFirebase(raffleId, updates) {
 // ===== BLOCKCHAIN =====
 async function initializeBlockchain() {
     try {
-        // Usar cluster más confiable
         window.connection = new solanaWeb3.Connection(
             solanaWeb3.clusterApiUrl(NETWORK),
-            {
-                commitment: 'confirmed',
-                disableRetryOnRateLimit: false,
-                confirmTransactionInitialTimeout: 60000
-            }
+            'confirmed'
         );
         
-        // Verificar que la conexión funciona
         const version = await connection.getVersion();
-        const slot = await connection.getSlot();
+        console.log('✅ Conectado a Solana Testnet:', version);
         
-        console.log('✅ Conectado a Solana Testnet:', {
-            version: version['solana-core'],
-            slot: slot,
-            network: NETWORK
-        });
-        
-        updateConnectionStatus('connected', `Slot: ${slot} | Versión: ${version['solana-core']}`);
+        updateConnectionStatus('connected', `Versión: ${version['solana-core']}`);
         return true;
-        
     } catch (error) {
         console.error('❌ Error conectando a blockchain:', error);
-        
-        // Intentar con endpoint alternativo
-        try {
-            console.log('🔄 Intentando con endpoint alternativo...');
-            window.connection = new solanaWeb3.Connection(
-                'https://api.testnet.solana.com',
-                'confirmed'
-            );
-            
-            const version = await connection.getVersion();
-            console.log('✅ Conectado mediante endpoint alternativo');
-            updateConnectionStatus('connected', 'Conexión alternativa');
-            return true;
-            
-        } catch (fallbackError) {
-            console.error('❌ Error en conexión alternativa:', fallbackError);
-            updateConnectionStatus('error', 'No se pudo conectar a Solana');
-            
-            // Mostrar instrucciones al usuario
-            showUserAlert('🌐 No se pudo conectar a Solana Testnet. Verifica tu conexión a internet', 'warning', 10000);
-            return false;
-        }
+        updateConnectionStatus('error', 'No se pudo conectar');
+        return false;
     }
 }
 
@@ -185,7 +189,6 @@ async function connectWallet(walletType) {
     try {
         let provider;
         
-        // Detectar el proveedor de wallet
         if (walletType === 'phantom') {
             provider = window.solana || window.phantom?.solana;
         } else if (walletType === 'solflare') {
@@ -193,36 +196,18 @@ async function connectWallet(walletType) {
         }
 
         if (!provider) {
-            // Si no se detecta la wallet, mostrar instrucciones
-            if (walletType === 'phantom') {
-                showUserAlert('❌ Phantom Wallet no detectada. ¿Está instalada? Descárgala desde phantom.app', 'error', 8000);
-            } else {
-                showUserAlert('❌ Solflare Wallet no detectada. ¿Está instalada?', 'error', 8000);
-            }
-            return false;
+            throw new Error(`${walletType} no detectada`);
         }
 
-        // Verificar si la wallet está instalada pero no disponible
-        if (!provider.isPhantom && !provider.isSolflare) {
-            throw new Error(`${walletType} no está disponible`);
-        }
-
-        // Intentar conexión
-        let publicKey;
-        if (provider.connect) {
-            const response = await provider.connect();
-            publicKey = response.publicKey;
-        } else {
-            // Método legacy
+        if (!provider.isConnected) {
             await provider.connect();
-            publicKey = provider.publicKey;
         }
 
+        const publicKey = provider.publicKey;
         if (!publicKey) {
             throw new Error('No se pudo obtener la clave pública');
         }
 
-        // Obtener balance
         const balance = await connection.getBalance(publicKey);
         const balanceInSOL = balance / solanaWeb3.LAMPORTS_PER_SOL;
 
@@ -247,19 +232,13 @@ async function connectWallet(walletType) {
         console.error(`❌ Error conectando ${walletType}:`, error);
         
         let errorMessage = `Error conectando ${walletType}`;
-        if (error.message.includes('User rejected') || error.message.includes('user rejected')) {
+        if (error.message.includes('User rejected')) {
             errorMessage = 'Usuario canceló la conexión';
-        } else if (error.message.includes('not detected') || error.message.includes('not available')) {
-            if (walletType === 'phantom') {
-                errorMessage = 'Phantom Wallet no detectada. Descárgala desde phantom.app';
-            } else {
-                errorMessage = 'Solflare Wallet no detectada. ¿Está instalada?';
-            }
-        } else if (error.message.includes('timeout')) {
-            errorMessage = 'Timeout al conectar. Intenta nuevamente';
+        } else if (error.message.includes('not detected')) {
+            errorMessage = `${walletType} no detectada. ¿Está instalada?`;
         }
         
-        showUserAlert(`❌ ${errorMessage}`, 'error', 8000);
+        showUserAlert(`❌ ${errorMessage}`, 'error');
         return false;
     }
 }
@@ -307,7 +286,6 @@ function checkAdminStatus() {
         return;
     }
     
-    // Verificar si la wallet conectada es la del admin
     const isAdmin = (appState.currentWallet.publicKey === ADMIN_WALLET_ADDRESS);
     
     if (appState.isAdmin !== isAdmin) {
@@ -401,25 +379,6 @@ function checkWalletAvailability() {
     };
     
     console.log('👛 Wallets disponibles:', wallets);
-    
-    // Actualizar UI basado en disponibilidad
-    const phantomBtn = document.getElementById('connect-phantom-real');
-    const solflareBtn = document.getElementById('connect-solflare-real');
-    
-    if (phantomBtn) {
-        if (!wallets.Phantom) {
-            phantomBtn.innerHTML = '🦄 Phantom (No detectada)';
-            phantomBtn.classList.add('btn-disabled');
-        }
-    }
-    
-    if (solflareBtn) {
-        if (!wallets.Solflare) {
-            solflareBtn.innerHTML = '🔆 Solflare (No detectada)';
-            solflareBtn.classList.add('btn-disabled');
-        }
-    }
-    
     return wallets;
 }
 
@@ -445,7 +404,7 @@ async function loadInitialData() {
 }
 
 async function loadRaffles() {
-    if (!window.db) {
+    if (!window.db || !appState.firebaseInitialized) {
         console.log('Firebase no disponible - usando datos de ejemplo');
         createSampleRaffles();
         return;
@@ -464,7 +423,6 @@ async function loadRaffles() {
                 const raffle = { 
                     id: doc.id, 
                     ...doc.data(),
-                    // Asegurar campos con valores por defecto
                     soldNumbers: doc.data().soldNumbers || [],
                     numberOwners: doc.data().numberOwners || {},
                     completed: doc.data().completed || false,
@@ -501,28 +459,12 @@ function createSampleRaffles() {
             prizeClaimed: false,
             shippingStatus: 'pending',
             createdAt: new Date().toISOString()
-        },
-        {
-            id: 'sample_2', 
-            name: 'iPhone 15 Pro Max',
-            description: 'Último modelo de iPhone con 512GB',
-            price: 0.2,
-            totalNumbers: 30,
-            image: '📱',
-            prize: 'iPhone 15 Pro Max',
-            soldNumbers: [1, 5, 10, 15],
-            numberOwners: {},
-            winner: null,
-            completed: false,
-            prizeClaimed: false,
-            shippingStatus: 'pending',
-            createdAt: new Date().toISOString()
         }
     ];
 }
 
 async function loadWinners() {
-    if (!window.db) {
+    if (!window.db || !appState.firebaseInitialized) {
         appState.winners = [];
         return;
     }
@@ -547,7 +489,6 @@ async function loadWinners() {
 function showSkeletonLoaders() {
     const containers = {
         'raffles-container': `
-            <div class="skeleton-raffle"></div>
             <div class="skeleton-raffle"></div>
             <div class="skeleton-raffle"></div>
         `,
@@ -859,8 +800,6 @@ async function processPayment() {
         // Actualizar datos locales Y en Firebase
         const raffleIndex = appState.raffles.findIndex(r => r.id === appState.currentRaffle.id);
         if (raffleIndex !== -1) {
-            const updates = {};
-            
             appState.selectedNumbers.forEach(num => {
                 if (!appState.raffles[raffleIndex].soldNumbers.includes(num)) {
                     appState.raffles[raffleIndex].soldNumbers.push(num);
@@ -875,7 +814,9 @@ async function processPayment() {
             });
         }
         
-        detailsEl.textContent = '✅ Pago procesado y guardado en Firebase';
+        detailsEl.textContent = appState.firebaseInitialized 
+            ? '✅ Pago procesado y guardado en Firebase' 
+            : '✅ Pago procesado (modo local)';
         statusEl.className = 'transaction-status transaction-success';
         
         showUserAlert(`🎉 ¡Compra exitosa! ${appState.selectedNumbers.length} números adquiridos`, 'success');
@@ -974,7 +915,9 @@ async function processClaim() {
             });
         }
         
-        detailsEl.textContent = '✅ ¡Premio reclamado y guardado en Firebase!';
+        detailsEl.textContent = appState.firebaseInitialized
+            ? '✅ ¡Premio reclamado y guardado en Firebase!'
+            : '✅ ¡Premio reclamado (modo local)!';
         showUserAlert('🎉 Premio reclamado exitosamente', 'success');
         
         setTimeout(() => {
@@ -1097,15 +1040,17 @@ async function createRaffle(event) {
             prizeClaimed: false,
             shippingStatus: 'pending',
             createdAt: new Date().toISOString(),
-            createdBy: appState.currentWallet.publicKey // Para tracking
+            createdBy: appState.currentWallet.publicKey
         };
         
         // Guardar en Firebase
         const saved = await saveRaffleToFirebase(newRaffle);
         
-        if (saved) {
+        if (saved || !appState.firebaseInitialized) {
             appState.raffles.push(newRaffle);
-            detailsEl.textContent = '✅ Sorteo creado y guardado en Firebase';
+            detailsEl.textContent = appState.firebaseInitialized
+                ? '✅ Sorteo creado y guardado en Firebase'
+                : '✅ Sorteo creado (modo local)';
             statusEl.className = 'transaction-status transaction-success';
             
             // Limpiar formulario
