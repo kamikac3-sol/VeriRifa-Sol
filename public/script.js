@@ -21,34 +21,19 @@ let appState = {
     winners: [],
     currentRaffle: null,
     selectedNumbers: [],
-    currentPage: 1,
-    firebaseAvailable: false
+    currentPage: 1
 };
-
-// ===== DIAGNÓSTICO INICIAL =====
-function runDiagnostics() {
-    console.log('🔍 DIAGNÓSTICO INICIAL:');
-    console.log('✅ Firebase disponible:', typeof firebase !== 'undefined');
-    console.log('✅ Solana Web3 disponible:', typeof solanaWeb3 !== 'undefined');
-    console.log('✅ Phantom disponible:', typeof window.solana !== 'undefined');
-    console.log('✅ Solflare disponible:', typeof window.solflare !== 'undefined');
-    
-    if (typeof firebase !== 'undefined') {
-        console.log('✅ Firebase apps:', firebase.apps.length);
-    }
-}
 
 // ===== INICIALIZACIÓN PRINCIPAL =====
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Inicializando VeriRifa-Sol...');
-    runDiagnostics();
     initializeApp();
 });
 
 async function initializeApp() {
     try {
         console.log('1. Inicializando Firebase...');
-        const firebaseOK = await initializeFirebase();
+        await initializeFirebase();
         
         console.log('2. Configurando event listeners...');
         setupAllEventListeners();
@@ -59,104 +44,26 @@ async function initializeApp() {
         console.log('4. Cargando datos iniciales...');
         await loadInitialData();
         
-        if (firebaseOK) {
-            showUserAlert('✅ VeriRifa-Sol cargada con Firebase', 'success');
-        } else {
-            showUserAlert('⚠️ VeriRifa-Sol en modo local (sin Firebase)', 'warning');
-        }
+        console.log('✅ VeriRifa-Sol inicializada correctamente');
+        showUserAlert('✅ VeriRifa-Sol cargada correctamente', 'success');
         
     } catch (error) {
-        console.error('❌ Error en inicialización:', error);
-        showUserAlert('❌ Error al cargar la aplicación', 'error');
+        console.error('❌ Error crítico en inicialización:', error);
+        showUserAlert('❌ Error al cargar la aplicación: ' + error.message, 'error');
     }
 }
 
-// ===== FIREBASE SIMPLIFICADO =====
+// ===== FIREBASE =====
 async function initializeFirebase() {
     try {
-        if (typeof firebase === 'undefined') {
-            console.log('❌ Firebase no está disponible en esta página');
-            appState.firebaseAvailable = false;
-            return false;
-        }
-
-        // Inicializar Firebase solo si no está inicializado
         if (!firebase.apps.length) {
             firebase.initializeApp(FIREBASE_CONFIG);
-            console.log('🔥 Firebase inicializado');
         }
-
         window.db = firebase.firestore();
-        
-        // Probar la conexión con una operación simple
-        const testDoc = await db.collection('test').doc('connection').get();
-        console.log('✅ Firebase conectado correctamente');
-        
-        appState.firebaseAvailable = true;
-        return true;
-        
+        console.log('✅ Firebase configurado');
     } catch (error) {
-        console.error('❌ Error de Firebase:', error);
-        appState.firebaseAvailable = false;
-        
-        // Crear una simulación de Firebase para que la app funcione
-        window.db = {
-            collection: (name) => ({
-                doc: (id) => ({
-                    set: (data) => {
-                        console.log('📝 [SIMULACIÓN] Guardando en Firebase:', { collection: name, id, data });
-                        return Promise.resolve();
-                    },
-                    update: (data) => {
-                        console.log('📝 [SIMULACIÓN] Actualizando en Firebase:', { collection: name, id, data });
-                        return Promise.resolve();
-                    },
-                    get: () => Promise.resolve({ exists: false })
-                }),
-                get: () => Promise.resolve({ empty: true, forEach: (fn) => {} }),
-                where: () => ({ 
-                    orderBy: () => ({ 
-                        get: () => Promise.resolve({ empty: true, forEach: (fn) => {} }) 
-                    }) 
-                })
-            })
-        };
-        
-        return false;
-    }
-}
-
-// ===== FUNCIONES FIREBASE MEJORADAS =====
-async function saveRaffleToFirebase(raffle) {
-    if (!appState.firebaseAvailable) {
-        console.log('📝 [MODO LOCAL] Sorteo creado localmente:', raffle.id);
-        return true; // En modo local, siempre "éxito"
-    }
-
-    try {
-        console.log('🔥 Intentando guardar en Firebase...');
-        await db.collection('raffles').doc(raffle.id).set(raffle);
-        console.log('✅ Sorteo guardado en Firebase:', raffle.id);
-        return true;
-    } catch (error) {
-        console.error('❌ Error guardando en Firebase:', error);
-        return false;
-    }
-}
-
-async function updateRaffleInFirebase(raffleId, updates) {
-    if (!appState.firebaseAvailable) {
-        console.log('📝 [MODO LOCAL] Sorteo actualizado localmente:', raffleId);
-        return true;
-    }
-
-    try {
-        await db.collection('raffles').doc(raffleId).update(updates);
-        console.log('✅ Sorteo actualizado en Firebase:', raffleId);
-        return true;
-    } catch (error) {
-        console.error('❌ Error actualizando en Firebase:', error);
-        return false;
+        console.error('❌ Error en Firebase:', error);
+        throw error;
     }
 }
 
@@ -169,7 +76,7 @@ async function initializeBlockchain() {
         );
         
         const version = await connection.getVersion();
-        console.log('✅ Conectado a Solana Testnet');
+        console.log('✅ Conectado a Solana Testnet:', version);
         
         updateConnectionStatus('connected', `Versión: ${version['solana-core']}`);
         return true;
@@ -184,14 +91,21 @@ function updateConnectionStatus(status, message) {
     const statusElement = document.getElementById('real-connection-status');
     if (!statusElement) return;
     
-    statusElement.innerHTML = status === 'connected' 
-        ? `<strong>Estado Blockchain:</strong> ✅ Conectado a Solana Testnet`
-        : `<strong>Estado Blockchain:</strong> ❌ Error de conexión`;
+    switch(status) {
+        case 'connected':
+            statusElement.innerHTML = `<strong>Estado Blockchain:</strong> ✅ Conectado a Solana Testnet<br><small>${message}</small>`;
+            break;
+        case 'error':
+            statusElement.innerHTML = `<strong>Estado Blockchain:</strong> ❌ Error de conexión`;
+            break;
+        default:
+            statusElement.innerHTML = `<strong>Estado Blockchain:</strong> Conectando...`;
+    }
 }
 
-// ===== WALLET CONNECTION MEJORADA =====
+// ===== WALLET CONNECTION =====
 async function connectWallet(walletType) {
-    console.log(`🔗 Conectando ${walletType}...`);
+    console.log(`🔗 Intentando conectar ${walletType}...`);
     
     try {
         let provider;
@@ -205,7 +119,6 @@ async function connectWallet(walletType) {
             throw new Error(`${walletType} no detectada`);
         }
 
-        // Conectar wallet
         if (!provider.isConnected) {
             await provider.connect();
         }
@@ -224,14 +137,23 @@ async function connectWallet(walletType) {
         checkAdminStatus();
         
         // Cerrar modal
-        document.getElementById('wallet-modal').classList.remove('active');
+        const walletModal = document.getElementById('wallet-modal');
+        if (walletModal) walletModal.classList.remove('active');
         
-        showUserAlert(`✅ ${walletType} conectada`, 'success');
+        showUserAlert(`✅ ${walletType} conectada correctamente`, 'success');
         return true;
 
     } catch (error) {
         console.error(`❌ Error conectando ${walletType}:`, error);
-        showUserAlert(`❌ Error conectando ${walletType}`, 'error');
+        
+        let errorMessage = `Error conectando ${walletType}`;
+        if (error.message.includes('User rejected')) {
+            errorMessage = 'Usuario canceló la conexión';
+        } else if (error.message.includes('not detected')) {
+            errorMessage = `${walletType} no detectada. ¿Está instalada?`;
+        }
+        
+        showUserAlert(`❌ ${errorMessage}`, 'error');
         return false;
     }
 }
@@ -242,26 +164,38 @@ function updateWalletDisplay() {
     const { publicKey, balance } = appState.currentWallet;
     const shortAddress = `${publicKey.substring(0, 6)}...${publicKey.substring(publicKey.length - 4)}`;
     
-    // Actualizar UI
-    document.getElementById('connected-wallet-address').textContent = shortAddress;
-    document.getElementById('connected-wallet-address').style.display = 'block';
+    // Actualizar elementos de UI
+    const elements = {
+        'connected-wallet-address': shortAddress,
+        'wallet-balance': `${balance.toFixed(4)} SOL`,
+        'connect-wallet-btn': '✅ Conectado',
+        'network-indicator': '🟢 Solana Testnet'
+    };
     
-    document.getElementById('wallet-balance').textContent = `${balance.toFixed(4)} SOL`;
-    document.getElementById('wallet-balance').style.display = 'block';
+    Object.keys(elements).forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = elements[id];
+            element.style.display = 'block';
+        }
+    });
     
-    document.getElementById('connect-wallet-btn').innerHTML = '✅ Conectado';
-    document.getElementById('network-indicator').textContent = '🟢 Solana Testnet';
+    // Mostrar botones adicionales
+    const additionalButtons = ['disconnect-wallet-btn', 'winner-info-btn'];
+    additionalButtons.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) element.style.display = 'block';
+    });
     
-    document.getElementById('disconnect-wallet-btn').style.display = 'block';
-    document.getElementById('winner-info-btn').style.display = 'block';
+    // Actualizar estado de conexión
+    const connectionStatus = document.getElementById('connection-status');
+    if (connectionStatus) {
+        connectionStatus.innerHTML = '<strong>Estado Wallet:</strong> ✅ Conectada';
+    }
 }
 
 function checkAdminStatus() {
-    if (!appState.currentWallet) {
-        appState.isAdmin = false;
-        hideAdminMenu();
-        return;
-    }
+    if (!appState.currentWallet) return;
     
     appState.isAdmin = (appState.currentWallet.publicKey === ADMIN_WALLET_ADDRESS);
     const adminMenuItem = document.getElementById('admin-menu-item');
@@ -269,27 +203,16 @@ function checkAdminStatus() {
     if (adminMenuItem) {
         if (appState.isAdmin) {
             adminMenuItem.classList.add('visible');
-            showUserAlert('✅ Modo administrador activado', 'success');
+            showUserAlert('✅ Modo verificador activado', 'success');
         } else {
             adminMenuItem.classList.remove('visible');
         }
     }
 }
 
-function showAdminMenu() {
-    const adminMenuItem = document.getElementById('admin-menu-item');
-    if (adminMenuItem) adminMenuItem.classList.add('visible');
-}
-
-function hideAdminMenu() {
-    const adminMenuItem = document.getElementById('admin-menu-item');
-    const adminPanel = document.getElementById('admin-panel');
-    
-    if (adminMenuItem) adminMenuItem.classList.remove('visible');
-    if (adminPanel) adminPanel.classList.remove('active');
-}
-
 function disconnectWallet() {
+    console.log('🔌 Desconectando wallet...');
+    
     if (appState.currentWallet?.provider) {
         try {
             appState.currentWallet.provider.disconnect();
@@ -301,27 +224,56 @@ function disconnectWallet() {
     // Resetear estado
     appState.currentWallet = null;
     appState.isAdmin = false;
+    appState.isConnected = false;
     
     // Resetear UI
-    document.getElementById('connected-wallet-address').style.display = 'none';
-    document.getElementById('wallet-balance').style.display = 'none';
-    document.getElementById('disconnect-wallet-btn').style.display = 'none';
-    document.getElementById('winner-info-btn').style.display = 'none';
+    const elementsToHide = [
+        'connected-wallet-address',
+        'wallet-balance', 
+        'disconnect-wallet-btn',
+        'winner-info-btn'
+    ];
     
-    document.getElementById('connect-wallet-btn').innerHTML = '<span>👛 Conectar Wallet</span>';
-    document.getElementById('network-indicator').textContent = '🔴 Desconectado';
+    elementsToHide.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) element.style.display = 'none';
+    });
     
-    hideAdminMenu();
+    // Resetear botón principal
+    const connectBtn = document.getElementById('connect-wallet-btn');
+    if (connectBtn) {
+        connectBtn.innerHTML = '<span>👛 Conectar Wallet</span>';
+        connectBtn.className = 'btn';
+    }
+    
+    // Resetear indicadores
+    const networkIndicator = document.getElementById('network-indicator');
+    if (networkIndicator) {
+        networkIndicator.textContent = '🔴 Desconectado';
+        networkIndicator.style.background = 'rgba(153, 69, 255, 0.2)';
+    }
+    
+    const connectionStatus = document.getElementById('connection-status');
+    if (connectionStatus) {
+        connectionStatus.innerHTML = '<strong>Estado Wallet:</strong> Desconectado';
+    }
+    
+    // Ocultar panel admin
+    const adminPanel = document.getElementById('admin-panel');
+    if (adminPanel) adminPanel.classList.remove('active');
+    
     showUserAlert('🔌 Wallet desconectada', 'info');
 }
 
-// ===== GESTIÓN DE DATOS =====
+// ===== DATA MANAGEMENT =====
 async function loadInitialData() {
     showSkeletonLoaders();
     
     try {
-        await loadRaffles();
-        await loadWinners();
+        await Promise.all([
+            loadRaffles(),
+            loadWinners()
+        ]);
         
         renderRaffles();
         renderWinnersArchive();
@@ -330,31 +282,36 @@ async function loadInitialData() {
     } catch (error) {
         console.error('Error cargando datos:', error);
         hideSkeletonLoaders();
+        showUserAlert('Error cargando datos', 'error');
     }
 }
 
 async function loadRaffles() {
-    if (!appState.firebaseAvailable) {
-        console.log('📝 Usando datos de ejemplo (modo local)');
+    if (!window.db) {
+        console.log('Firebase no disponible - usando datos de ejemplo');
         createSampleRaffles();
         return;
     }
 
     try {
-        const snapshot = await db.collection('raffles')
-            .where('completed', '==', false)
-            .orderBy('createdAt', 'desc')
-            .get();
-            
+        const snapshot = await db.collection('raffles').get();
         appState.raffles = [];
         
         if (!snapshot.empty) {
             snapshot.forEach(doc => {
                 const raffle = { id: doc.id, ...doc.data() };
+                // Asegurar campos requeridos
+                raffle.soldNumbers = raffle.soldNumbers || [];
+                raffle.numberOwners = raffle.numberOwners || {};
+                raffle.completed = raffle.completed || false;
+                raffle.prizeClaimed = raffle.prizeClaimed || false;
+                raffle.shippingStatus = raffle.shippingStatus || 'pending';
+                
                 appState.raffles.push(raffle);
             });
             console.log(`✅ ${appState.raffles.length} sorteos cargados`);
         } else {
+            console.log('📝 No hay sorteos - creando ejemplos');
             createSampleRaffles();
         }
     } catch (error) {
@@ -367,13 +324,29 @@ function createSampleRaffles() {
     appState.raffles = [
         {
             id: 'sample_1',
-            name: 'PlayStation 5',
-            description: 'Sorteo de PS5 nueva',
+            name: 'PlayStation 5 Edición Especial',
+            description: 'Sorteo de una PlayStation 5 nueva en caja',
             price: 0.1,
             totalNumbers: 50,
             image: '🎮',
             prize: 'PlayStation 5',
-            soldNumbers: [1, 2, 3, 4, 5],
+            soldNumbers: [1, 2, 3, 4, 5, 10, 15, 20],
+            numberOwners: {},
+            winner: null,
+            completed: false,
+            prizeClaimed: false,
+            shippingStatus: 'pending',
+            createdAt: new Date().toISOString()
+        },
+        {
+            id: 'sample_2', 
+            name: 'iPhone 15 Pro Max',
+            description: 'Último modelo de iPhone con 512GB',
+            price: 0.2,
+            totalNumbers: 30,
+            image: '📱',
+            prize: 'iPhone 15 Pro Max',
+            soldNumbers: [1, 5, 10, 15],
             numberOwners: {},
             winner: null,
             completed: false,
@@ -385,7 +358,7 @@ function createSampleRaffles() {
 }
 
 async function loadWinners() {
-    if (!appState.firebaseAvailable) {
+    if (!window.db) {
         appState.winners = [];
         return;
     }
@@ -398,6 +371,7 @@ async function loadWinners() {
             snapshot.forEach(doc => {
                 appState.winners.push({ id: doc.id, ...doc.data() });
             });
+            console.log(`✅ ${appState.winners.length} ganadores cargados`);
         }
     } catch (error) {
         console.error('Error cargando ganadores:', error);
@@ -411,8 +385,10 @@ function showSkeletonLoaders() {
         'raffles-container': `
             <div class="skeleton-raffle"></div>
             <div class="skeleton-raffle"></div>
+            <div class="skeleton-raffle"></div>
         `,
         'winners-container': `
+            <div class="skeleton skeleton-text" style="height: 120px; margin-bottom: 1rem;"></div>
             <div class="skeleton skeleton-text" style="height: 120px; margin-bottom: 1rem;"></div>
         `
     };
@@ -424,57 +400,77 @@ function showSkeletonLoaders() {
 }
 
 function hideSkeletonLoaders() {
-    // Se ocultan al renderizar contenido
+    // Se ocultan automáticamente al renderizar contenido real
 }
 
 function renderRaffles() {
     const container = document.getElementById('raffles-container');
     if (!container) return;
     
-    if (appState.raffles.length === 0) {
+    const activeRaffles = appState.raffles.filter(raffle => !raffle.completed);
+    
+    if (activeRaffles.length === 0) {
         container.innerHTML = `
             <div style="text-align: center; color: var(--gray); padding: 3rem;">
                 <h3>📝 No hay sorteos activos</h3>
-                <p>Crea el primer sorteo desde el panel de administración</p>
+                <p>Los sorteos aparecerán aquí pronto</p>
             </div>
         `;
         return;
     }
     
-    container.innerHTML = appState.raffles.map(raffle => `
-        <div class="raffle-card">
-            <div class="raffle-image">
-                <div style="font-size: 3rem;">${raffle.image || '🎁'}</div>
-            </div>
-            <div class="raffle-content">
-                <h3 class="raffle-title">${raffle.name}</h3>
-                <div class="raffle-price">${raffle.price} SOL por número</div>
-                <div class="raffle-info">
-                    <span>🎯 ${raffle.prize}</span>
-                    <span>🔢 ${raffle.soldNumbers?.length || 0}/${raffle.totalNumbers} números</span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress" style="width: ${((raffle.soldNumbers?.length || 0) / raffle.totalNumbers) * 100}%"></div>
-                </div>
-                ${createRaffleActionButton(raffle)}
-            </div>
-        </div>
-    `).join('');
-    
+    container.innerHTML = activeRaffles.map(raffle => createRaffleCard(raffle)).join('');
     attachRaffleEventListeners();
 }
 
-function createRaffleActionButton(raffle) {
+function createRaffleCard(raffle) {
     const sold = raffle.soldNumbers?.length || 0;
-    const total = raffle.totalNumbers;
+    const total = raffle.totalNumbers || 100;
+    const progress = total > 0 ? (sold / total) * 100 : 0;
+    const isUserWinner = raffle.winner && appState.currentWallet?.publicKey === raffle.winner.wallet;
     
+    const actionButton = createRaffleActionButton(raffle, sold, total, isUserWinner);
+    const imageContent = raffle.image?.startsWith('http') 
+        ? `<img src="${raffle.image}" alt="${raffle.name}" onerror="this.parentElement.innerHTML='🎁'">`
+        : `<div style="font-size: 3rem;">${raffle.image || '🎁'}</div>`;
+    
+    return `
+        <div class="raffle-card">
+            <div class="raffle-image">${imageContent}</div>
+            <div class="raffle-content">
+                <h3 class="raffle-title">${raffle.name}</h3>
+                <div class="raffle-price">${raffle.price || 0.1} SOL por número</div>
+                <div class="raffle-info">
+                    <span>🎯 ${raffle.prize || raffle.name}</span>
+                    <span>🔢 ${sold}/${total} números</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress" style="width: ${progress}%"></div>
+                </div>
+                <div class="raffle-info">
+                    <span>🏆 ${raffle.winner ? 'Ganador seleccionado' : 'En progreso'}</span>
+                    <span>${sold >= total ? '🔒 Completo' : '🟢 Disponible'}</span>
+                </div>
+                ${actionButton}
+            </div>
+        </div>
+    `;
+}
+
+function createRaffleActionButton(raffle, sold, total, isUserWinner) {
     if (raffle.winner) {
-        const isUserWinner = appState.currentWallet && raffle.winner.wallet === appState.currentWallet.publicKey;
         if (isUserWinner) {
-            return `<button class="btn btn-success claim-btn" data-raffle="${raffle.id}" style="width: 100%;">🎉 Reclamar Premio</button>`;
+            if (raffle.prizeClaimed) {
+                const status = getShippingStatus(raffle.shippingStatus);
+                return `<button class="btn" style="width: 100%; background: ${status.color};" disabled>${status.icon} ${status.text}</button>`;
+            } else {
+                return `<button class="btn btn-success claim-btn" data-raffle="${raffle.id}" style="width: 100%;">🎉 Reclamar Premio</button>`;
+            }
         } else {
             return `<button class="btn" style="width: 100%; background: var(--gray);" disabled>❌ No Ganaste</button>`;
         }
+    } else if (raffle.isSelectingWinner) {
+        return `<button class="btn" style="width: 100%; background: var(--warning);" disabled>⏳ Seleccionando...</button>`;
     } else {
         if (appState.isAdmin) {
             if (sold >= total) {
@@ -492,7 +488,18 @@ function createRaffleActionButton(raffle) {
     }
 }
 
+function getShippingStatus(status) {
+    const statuses = {
+        pending: { text: 'Pendiente', color: 'var(--warning)', icon: '⏳' },
+        claimed: { text: 'Reclamado', color: 'var(--info)', icon: '📦' },
+        shipped: { text: 'Enviado', color: 'var(--primary)', icon: '🚚' },
+        delivered: { text: 'Entregado', color: 'var(--success)', icon: '✅' }
+    };
+    return statuses[status] || statuses.pending;
+}
+
 function attachRaffleEventListeners() {
+    // Botones de participación
     document.querySelectorAll('.participate-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             if (!appState.currentWallet) {
@@ -504,12 +511,14 @@ function attachRaffleEventListeners() {
         });
     });
     
+    // Botones de selección de ganador (admin)
     document.querySelectorAll('.select-winner-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             selectWinner(e.target.getAttribute('data-raffle'));
         });
     });
     
+    // Botones de reclamar premio
     document.querySelectorAll('.claim-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             openClaimModal(e.target.getAttribute('data-raffle'));
@@ -525,7 +534,7 @@ function renderWinnersArchive() {
         container.innerHTML = `
             <div style="text-align: center; color: var(--gray); padding: 2rem;">
                 <h3>📝 Aún no hay ganadores</h3>
-                <p>Los ganadores aparecerán aquí</p>
+                <p>Los ganadores aparecerán aquí después de cada sorteo</p>
             </div>
         `;
         return;
@@ -541,15 +550,323 @@ function renderWinnersArchive() {
                 <div><strong>Sorteo:</strong> ${winner.raffleName}</div>
                 <div><strong>Número ganador:</strong> ${winner.winningNumber}</div>
                 <div><strong>Wallet:</strong> <span class="winner-wallet">${winner.winnerWallet.substring(0, 8)}...${winner.winnerWallet.substring(winner.winnerWallet.length - 4)}</span></div>
+                ${winner.winnerInfo ? `<div><strong>Ganador:</strong> ${winner.winnerInfo.name}</div>` : ''}
             </div>
         </div>
     `).join('');
 }
 
-// ===== CREACIÓN DE SORTEOS - VERSIÓN SIMPLIFICADA =====
+// ===== NUMBER SELECTION MODAL =====
+function openNumberSelection(raffleId) {
+    const raffle = appState.raffles.find(r => r.id === raffleId);
+    if (!raffle) {
+        showUserAlert('❌ Sorteo no encontrado', 'error');
+        return;
+    }
+    
+    appState.currentRaffle = raffle;
+    appState.selectedNumbers = [];
+    appState.currentPage = 1;
+    
+    // Actualizar modal
+    document.getElementById('modal-raffle-name').textContent = raffle.name;
+    document.getElementById('price-per-number').textContent = `${raffle.price} SOL`;
+    document.getElementById('user-balance').textContent = `${appState.currentWallet.balance.toFixed(4)} SOL`;
+    
+    renderNumberGrid();
+    updatePaymentSummary();
+    
+    // Mostrar modal
+    document.getElementById('number-selection-modal').classList.add('active');
+}
+
+function renderNumberGrid() {
+    const grid = document.getElementById('numbers-grid');
+    const pageInfo = document.getElementById('page-info');
+    const pagination = document.getElementById('pagination-controls');
+    
+    if (!appState.currentRaffle) return;
+    
+    const raffle = appState.currentRaffle;
+    const numbersPerPage = 50;
+    const totalPages = Math.ceil(raffle.totalNumbers / numbersPerPage);
+    const startNum = (appState.currentPage - 1) * numbersPerPage + 1;
+    const endNum = Math.min(appState.currentPage * numbersPerPage, raffle.totalNumbers);
+    
+    // Info de página
+    pageInfo.textContent = `Página ${appState.currentPage} de ${totalPages} (Números ${startNum}-${endNum})`;
+    
+    // Paginación
+    pagination.innerHTML = '';
+    for (let i = 1; i <= totalPages; i++) {
+        const btn = document.createElement('button');
+        btn.className = `page-btn ${i === appState.currentPage ? 'active' : ''}`;
+        btn.textContent = i;
+        btn.onclick = () => {
+            appState.currentPage = i;
+            renderNumberGrid();
+        };
+        pagination.appendChild(btn);
+    }
+    
+    // Números
+    grid.innerHTML = '';
+    for (let i = startNum; i <= endNum; i++) {
+        const btn = document.createElement('button');
+        btn.className = 'number-btn';
+        btn.textContent = i;
+        
+        if (raffle.soldNumbers?.includes(i)) {
+            btn.classList.add('sold');
+            btn.disabled = true;
+        } else if (appState.selectedNumbers.includes(i)) {
+            btn.classList.add('selected');
+        }
+        
+        if (!raffle.soldNumbers?.includes(i)) {
+            btn.onclick = () => toggleNumber(i);
+        }
+        
+        grid.appendChild(btn);
+    }
+}
+
+function toggleNumber(number) {
+    const index = appState.selectedNumbers.indexOf(number);
+    if (index === -1) {
+        appState.selectedNumbers.push(number);
+    } else {
+        appState.selectedNumbers.splice(index, 1);
+    }
+    renderNumberGrid();
+    updateSelectedNumbers();
+    updatePaymentSummary();
+}
+
+function updateSelectedNumbers() {
+    const list = document.getElementById('selected-numbers-list');
+    if (!list) return;
+    
+    list.innerHTML = '';
+    appState.selectedNumbers.sort((a, b) => a - b).forEach(num => {
+        const tag = document.createElement('div');
+        tag.className = 'selected-number-tag';
+        tag.textContent = num;
+        list.appendChild(tag);
+    });
+}
+
+function updatePaymentSummary() {
+    const count = appState.selectedNumbers.length;
+    const price = appState.currentRaffle?.price || 0;
+    const total = count * price;
+    
+    document.getElementById('selected-count').textContent = count;
+    document.getElementById('total-payment').textContent = `${total.toFixed(4)} SOL`;
+}
+
+async function processPayment() {
+    if (!appState.currentWallet || !appState.currentRaffle) {
+        showUserAlert('❌ Error: Wallet no conectada', 'error');
+        return;
+    }
+    
+    if (appState.selectedNumbers.length === 0) {
+        showUserAlert('❌ Selecciona al menos un número', 'warning');
+        return;
+    }
+    
+    const total = appState.selectedNumbers.length * appState.currentRaffle.price;
+    if (appState.currentWallet.balance < total) {
+        showUserAlert('❌ Saldo insuficiente', 'error');
+        return;
+    }
+    
+    try {
+        const statusEl = document.getElementById('payment-status');
+        const detailsEl = document.getElementById('payment-details');
+        
+        statusEl.style.display = 'block';
+        detailsEl.textContent = '⏳ Procesando pago...';
+        
+        // Simular transacción
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Actualizar datos locales
+        const raffleIndex = appState.raffles.findIndex(r => r.id === appState.currentRaffle.id);
+        if (raffleIndex !== -1) {
+            appState.selectedNumbers.forEach(num => {
+                if (!appState.raffles[raffleIndex].soldNumbers.includes(num)) {
+                    appState.raffles[raffleIndex].soldNumbers.push(num);
+                    appState.raffles[raffleIndex].numberOwners[num] = appState.currentWallet.publicKey;
+                }
+            });
+        }
+        
+        detailsEl.textContent = '✅ Pago procesado exitosamente';
+        statusEl.className = 'transaction-status transaction-success';
+        
+        showUserAlert(`🎉 ¡Compra exitosa! ${appState.selectedNumbers.length} números adquiridos`, 'success');
+        
+        setTimeout(() => {
+            document.getElementById('number-selection-modal').classList.remove('active');
+            renderRaffles();
+        }, 1500);
+        
+    } catch (error) {
+        console.error('Error en pago:', error);
+        document.getElementById('payment-details').textContent = '❌ Error procesando pago';
+        document.getElementById('payment-status').className = 'transaction-status transaction-error';
+        showUserAlert('❌ Error en el pago', 'error');
+    }
+}
+
+// ===== CLAIM PRIZE MODAL =====
+function openClaimModal(raffleId) {
+    const raffle = appState.raffles.find(r => r.id === raffleId);
+    if (!raffle?.winner) {
+        showUserAlert('❌ Sorteo no encontrado', 'error');
+        return;
+    }
+    
+    if (!appState.currentWallet || raffle.winner.wallet !== appState.currentWallet.publicKey) {
+        showUserAlert('❌ No eres el ganador', 'error');
+        return;
+    }
+    
+    // Actualizar modal
+    document.getElementById('prize-name').textContent = `Premio: ${raffle.prize}`;
+    document.getElementById('claim-raffle-name').textContent = raffle.name;
+    document.getElementById('winning-number').textContent = raffle.winner.number;
+    document.getElementById('winner-wallet').textContent = `${raffle.winner.wallet.substring(0, 8)}...${raffle.winner.wallet.substring(raffle.winner.wallet.length - 4)}`;
+    
+    // Reset form
+    ['winner-name', 'winner-email', 'winner-phone', 'winner-address', 'winner-notes'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) element.value = '';
+    });
+    
+    document.getElementById('claim-status').style.display = 'none';
+    document.getElementById('claim-prize-modal').classList.add('active');
+}
+
+async function processClaim() {
+    const fields = {
+        name: document.getElementById('winner-name').value.trim(),
+        email: document.getElementById('winner-email').value.trim(),
+        phone: document.getElementById('winner-phone').value.trim(),
+        address: document.getElementById('winner-address').value.trim()
+    };
+    
+    // Validación básica
+    for (const [field, value] of Object.entries(fields)) {
+        if (!value) {
+            showUserAlert(`❌ Completa el campo ${field}`, 'error');
+            return;
+        }
+    }
+    
+    if (!isValidEmail(fields.email)) {
+        showUserAlert('❌ Email inválido', 'error');
+        return;
+    }
+    
+    try {
+        const statusEl = document.getElementById('claim-status');
+        const detailsEl = document.getElementById('claim-details');
+        
+        statusEl.style.display = 'block';
+        detailsEl.textContent = '⏳ Procesando reclamación...';
+        
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Actualizar datos
+        const raffleIndex = appState.raffles.findIndex(r => r.id === appState.currentRaffle.id);
+        if (raffleIndex !== -1) {
+            appState.raffles[raffleIndex].prizeClaimed = true;
+            appState.raffles[raffleIndex].winnerInfo = {
+                name: fields.name,
+                email: fields.email,
+                phone: fields.phone,
+                address: fields.address,
+                notes: document.getElementById('winner-notes').value.trim(),
+                claimDate: new Date().toISOString()
+            };
+            appState.raffles[raffleIndex].shippingStatus = 'claimed';
+        }
+        
+        detailsEl.textContent = '✅ ¡Premio reclamado!';
+        showUserAlert('🎉 Premio reclamado exitosamente', 'success');
+        
+        setTimeout(() => {
+            document.getElementById('claim-prize-modal').classList.remove('active');
+            renderRaffles();
+        }, 1500);
+        
+    } catch (error) {
+        console.error('Error reclamando premio:', error);
+        document.getElementById('claim-details').textContent = '❌ Error reclamando premio';
+        showUserAlert('❌ Error reclamando premio', 'error');
+    }
+}
+
+// ===== ADMIN FUNCTIONS =====
+async function selectWinner(raffleId) {
+    if (!appState.isAdmin) {
+        showUserAlert('❌ Solo administradores', 'error');
+        return;
+    }
+    
+    const raffle = appState.raffles.find(r => r.id === raffleId);
+    if (!raffle || raffle.soldNumbers?.length === 0) {
+        showUserAlert('❌ No hay números vendidos', 'warning');
+        return;
+    }
+    
+    try {
+        raffle.isSelectingWinner = true;
+        renderRaffles();
+        
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        const randomIndex = Math.floor(Math.random() * raffle.soldNumbers.length);
+        const winningNumber = raffle.soldNumbers[randomIndex];
+        const winnerWallet = raffle.numberOwners[winningNumber];
+        
+        raffle.winner = {
+            number: winningNumber,
+            wallet: winnerWallet,
+            date: new Date().toISOString()
+        };
+        raffle.completed = true;
+        raffle.isSelectingWinner = false;
+        
+        // Registrar ganador
+        const winnerData = {
+            raffleName: raffle.name,
+            prize: raffle.prize,
+            winningNumber: winningNumber,
+            winnerWallet: winnerWallet,
+            winnerDate: new Date().toISOString(),
+            claimed: false
+        };
+        
+        appState.winners.push(winnerData);
+        showUserAlert(`🏆 ¡Ganador seleccionado! Número: ${winningNumber}`, 'success');
+        
+        renderRaffles();
+        renderWinnersArchive();
+        
+    } catch (error) {
+        console.error('Error seleccionando ganador:', error);
+        raffle.isSelectingWinner = false;
+        renderRaffles();
+        showUserAlert('❌ Error seleccionando ganador', 'error');
+    }
+}
+
 async function createRaffle(event) {
     event.preventDefault();
-    console.log('🎯 Iniciando creación de sorteo...');
     
     if (!appState.isAdmin) {
         showUserAlert('❌ Solo administradores', 'error');
@@ -561,15 +878,14 @@ async function createRaffle(event) {
         description: document.getElementById('raffle-description').value.trim(),
         price: parseFloat(document.getElementById('ticket-price').value),
         totalNumbers: parseInt(document.getElementById('max-numbers').value),
-        image: document.getElementById('raffle-image').value.trim() || '🎁'
+        image: document.getElementById('raffle-image').value.trim()
     };
     
-    // Validación
-    if (!formData.name || !formData.description || formData.price <= 0 || formData.totalNumbers <= 0) {
-        showUserAlert('❌ Completa todos los campos correctamente', 'error');
+    if (Object.values(formData).some(value => !value)) {
+        showUserAlert('❌ Completa todos los campos', 'error');
         return;
     }
-
+    
     try {
         const statusEl = document.getElementById('transaction-status');
         const detailsEl = document.getElementById('transaction-details');
@@ -587,79 +903,31 @@ async function createRaffle(event) {
             completed: false,
             prizeClaimed: false,
             shippingStatus: 'pending',
-            createdAt: new Date().toISOString(),
-            createdBy: appState.currentWallet.publicKey
+            createdAt: new Date().toISOString()
         };
         
-        console.log('📦 Datos del sorteo:', newRaffle);
+        appState.raffles.push(newRaffle);
         
-        // Guardar en Firebase
-        const saved = await saveRaffleToFirebase(newRaffle);
+        detailsEl.textContent = '✅ Sorteo creado exitosamente';
+        statusEl.className = 'transaction-status transaction-success';
         
-        if (saved) {
-            appState.raffles.push(newRaffle);
-            detailsEl.textContent = appState.firebaseAvailable 
-                ? '✅ Sorteo creado y guardado en Firebase' 
-                : '✅ Sorteo creado (modo local)';
-            statusEl.className = 'transaction-status transaction-success';
-            
-            // Limpiar formulario
-            document.getElementById('create-raffle-form').reset();
-            document.getElementById('image-preview').innerHTML = '<div class="emoji-preview">🖼️</div>';
-            
-            showUserAlert('🎯 Sorteo creado exitosamente', 'success');
-            
-            setTimeout(() => {
-                statusEl.style.display = 'none';
-                renderRaffles();
-            }, 2000);
-            
-        } else {
-            throw new Error('No se pudo guardar el sorteo');
-        }
+        // Limpiar formulario
+        document.getElementById('create-raffle-form').reset();
+        document.getElementById('image-preview').innerHTML = '<div class="emoji-preview">🖼️</div>';
+        
+        showUserAlert('🎯 Sorteo creado exitosamente', 'success');
+        
+        setTimeout(() => {
+            statusEl.style.display = 'none';
+            renderRaffles();
+        }, 1500);
         
     } catch (error) {
-        console.error('❌ Error creando sorteo:', error);
+        console.error('Error creando sorteo:', error);
         document.getElementById('transaction-details').textContent = '❌ Error creando sorteo';
         document.getElementById('transaction-status').className = 'transaction-status transaction-error';
         showUserAlert('❌ Error creando sorteo', 'error');
     }
-}
-
-// ===== FUNCIONES RESTANTES (simplificadas) =====
-function openNumberSelection(raffleId) {
-    const raffle = appState.raffles.find(r => r.id === raffleId);
-    if (!raffle) return;
-    
-    appState.currentRaffle = raffle;
-    appState.selectedNumbers = [];
-    
-    document.getElementById('modal-raffle-name').textContent = raffle.name;
-    document.getElementById('price-per-number').textContent = `${raffle.price} SOL`;
-    document.getElementById('user-balance').textContent = `${appState.currentWallet.balance.toFixed(4)} SOL`;
-    
-    document.getElementById('number-selection-modal').classList.add('active');
-}
-
-function selectWinner(raffleId) {
-    if (!appState.isAdmin) return;
-    
-    const raffle = appState.raffles.find(r => r.id === raffleId);
-    if (!raffle || raffle.soldNumbers?.length === 0) return;
-    
-    // Simular selección de ganador
-    const winningNumber = raffle.soldNumbers[Math.floor(Math.random() * raffle.soldNumbers.length)];
-    const winnerWallet = raffle.numberOwners[winningNumber];
-    
-    raffle.winner = { number: winningNumber, wallet: winnerWallet };
-    raffle.completed = true;
-    
-    showUserAlert(`🏆 ¡Ganador seleccionado! Número: ${winningNumber}`, 'success');
-    renderRaffles();
-}
-
-function openClaimModal(raffleId) {
-    document.getElementById('claim-prize-modal').classList.add('active');
 }
 
 // ===== UTILITY FUNCTIONS =====
@@ -675,14 +943,20 @@ function showUserAlert(message, type = 'info', duration = 5000) {
     msg.textContent = message;
     alert.style.display = 'block';
     
-    setTimeout(() => {
-        alert.style.display = 'none';
-    }, duration);
+    if (duration > 0) {
+        setTimeout(() => {
+            alert.style.display = 'none';
+        }, duration);
+    }
 }
 
 function hideUserAlert() {
     const alert = document.getElementById('user-alert');
     if (alert) alert.style.display = 'none';
+}
+
+function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 function showUserWinnings() {
@@ -698,67 +972,134 @@ function showUserWinnings() {
     if (userWinnings.length === 0) {
         showUserAlert('📝 No has ganado ningún sorteo', 'info');
     } else {
-        showUserAlert('🏆 ¡Has ganado sorteos! Reclama tu premio', 'success');
+        const list = userWinnings.map(r => `• ${r.name} (N° ${r.winner.number})`).join('\n');
+        showUserAlert(`🏆 Tus premios:\n${list}`, 'success', 8000);
     }
 }
 
-// ===== EVENT LISTENERS =====
+// ===== EVENT LISTENERS SETUP =====
 function setupAllEventListeners() {
     console.log('🔧 Configurando event listeners...');
     
-    // Wallet
-    document.getElementById('connect-wallet-btn').addEventListener('click', () => {
+    // Wallet Modal
+    safeAddListener('connect-wallet-btn', 'click', () => {
         document.getElementById('wallet-modal').classList.add('active');
     });
     
-    document.getElementById('close-wallet-modal').addEventListener('click', () => {
+    safeAddListener('close-wallet-modal', 'click', () => {
         document.getElementById('wallet-modal').classList.remove('active');
     });
     
-    document.getElementById('connect-phantom-real').addEventListener('click', () => connectWallet('phantom'));
-    document.getElementById('connect-solflare-real').addEventListener('click', () => connectWallet('solflare'));
-    document.getElementById('disconnect-wallet-btn').addEventListener('click', disconnectWallet);
+    safeAddListener('connect-phantom-real', 'click', () => connectWallet('phantom'));
+    safeAddListener('connect-solflare-real', 'click', () => connectWallet('solflare'));
+    safeAddListener('disconnect-wallet-btn', 'click', disconnectWallet);
     
-    // Admin
-    document.getElementById('admin-panel-link').addEventListener('click', (e) => {
+    // Admin Panel
+    safeAddListener('admin-panel-link', 'click', (e) => {
         e.preventDefault();
         if (appState.isAdmin) {
             document.getElementById('admin-panel').classList.add('active');
+        } else {
+            showUserAlert('❌ Solo administradores', 'error');
         }
     });
     
-    document.getElementById('close-admin-panel').addEventListener('click', () => {
+    safeAddListener('close-admin-panel', 'click', () => {
         document.getElementById('admin-panel').classList.remove('active');
     });
     
-    // Modales
-    document.getElementById('close-number-modal').addEventListener('click', () => {
+    // Number Selection Modal
+    safeAddListener('close-number-modal', 'click', () => {
         document.getElementById('number-selection-modal').classList.remove('active');
     });
     
-    document.getElementById('close-claim-modal').addEventListener('click', () => {
+    safeAddListener('confirm-payment-btn', 'click', processPayment);
+    safeAddListener('cancel-selection-btn', 'click', () => {
+        document.getElementById('number-selection-modal').classList.remove('active');
+    });
+    
+    // Claim Prize Modal
+    safeAddListener('close-claim-modal', 'click', () => {
         document.getElementById('claim-prize-modal').classList.remove('active');
     });
     
-    // Formularios
-    document.getElementById('create-raffle-form').addEventListener('submit', createRaffle);
-    document.getElementById('winner-info-btn').addEventListener('click', showUserWinnings);
+    safeAddListener('submit-claim-btn', 'click', processClaim);
+    safeAddListener('cancel-claim-btn', 'click', () => {
+        document.getElementById('claim-prize-modal').classList.remove('active');
+    });
+    
+    // Winner Info
+    safeAddListener('winner-info-btn', 'click', showUserWinnings);
+    
+    // Admin Actions
+    safeAddListener('view-winners-admin', 'click', () => {
+        showUserAlert('🔍 Vista de ganadores en desarrollo', 'info');
+    });
+    
+    safeAddListener('refresh-winners-btn', 'click', () => {
+        loadInitialData();
+        showUserAlert('🔄 Datos actualizados', 'success');
+    });
+    
+    // Form Creation
+    safeAddListener('create-raffle-form', 'submit', createRaffle);
     
     // Image Preview
-    document.getElementById('raffle-image').addEventListener('input', function() {
+    safeAddListener('raffle-image', 'input', function() {
         const preview = document.getElementById('image-preview');
         const value = this.value.trim();
-        preview.innerHTML = value ? `<div class="emoji-preview">${value}</div>` : '<div class="emoji-preview">🖼️</div>';
+        
+        if (value.startsWith('http')) {
+            preview.innerHTML = `<img src="${value}" alt="Preview" onerror="this.parentElement.innerHTML='<div class=\"emoji-preview\">❌</div>'">`;
+        } else {
+            preview.innerHTML = `<div class="emoji-preview">${value || '🖼️'}</div>`;
+        }
     });
     
-    // Cerrar modales al hacer click fuera
+    // FAQ Toggles
+    document.querySelectorAll('.faq-question').forEach(question => {
+        question.addEventListener('click', function() {
+            const answer = this.nextElementSibling;
+            const toggle = this.querySelector('.faq-toggle');
+            
+            // Cerrar otros
+            document.querySelectorAll('.faq-answer').forEach(ans => {
+                if (ans !== answer) {
+                    ans.classList.remove('active');
+                    ans.previousElementSibling.querySelector('.faq-toggle').classList.remove('active');
+                }
+            });
+            
+            // Toggle actual
+            answer.classList.toggle('active');
+            toggle.classList.toggle('active');
+        });
+    });
+    
+    // Close Alerts
+    safeAddListener('close-alert', 'click', hideUserAlert);
+    
+    // Close modals on outside click
     window.addEventListener('click', (e) => {
-        if (e.target.id === 'wallet-modal') document.getElementById('wallet-modal').classList.remove('active');
-        if (e.target.id === 'number-selection-modal') document.getElementById('number-selection-modal').classList.remove('active');
-        if (e.target.id === 'claim-prize-modal') document.getElementById('claim-prize-modal').classList.remove('active');
+        ['wallet-modal', 'number-selection-modal', 'claim-prize-modal'].forEach(modalId => {
+            const modal = document.getElementById(modalId);
+            if (e.target === modal) {
+                modal.classList.remove('active');
+            }
+        });
     });
     
-    console.log('✅ Event listeners configurados');
+    console.log('✅ Todos los event listeners configurados');
 }
 
-console.log('🎯 VeriRifa-Sol - Script cargado');
+function safeAddListener(id, event, handler) {
+    const element = document.getElementById(id);
+    if (element) {
+        element.addEventListener(event, handler);
+        console.log(`✅ Listener agregado: ${id}`);
+    } else {
+        console.warn(`⚠️ Elemento no encontrado: ${id}`);
+    }
+}
+
+console.log('🎯 VeriRifa-Sol - Script cargado y listo');
